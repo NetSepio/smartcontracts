@@ -16,6 +16,7 @@ contract NetSepio {
     }
 
     enum WebsiteType {spam, malware, virus, safe}
+    
     struct Website {
         string name;
         string domainName;
@@ -93,7 +94,7 @@ contract NetSepio {
         // has voting votingRight
         require(
             user.votingRight,
-            "You do not have voting right now, if please appeal in case you have been banned"
+            "You do not have voting right now, please appeal in case you have been banned"
         );
         // has daily votes count left
         uint256 daysTillJoin = (block.timestamp - user.joinedOnDate) /
@@ -106,6 +107,18 @@ contract NetSepio {
             dailyVoteCount < VoteLimit[user.userType],
             "You do not have enough votes left for today"
         );
+
+        // one domain one vote by one user
+        bool userAlreadyVoted = false;
+        Vote[] memory tempV = Votes[msg.sender][user.dayCount];
+        for(uint i= 0; i< tempV.length; i++) {
+            if( keccak256(abi.encodePacked(tempV[i].domainName)) == keccak256(abi.encodePacked(_domainName))) {
+                userAlreadyVoted = true;
+            }
+        }
+
+        require(!userAlreadyVoted, "You have already voted for this domain");
+
         // vote for the website for the userType
         Vote memory newvote = Vote({
             domainName: _domainName,
