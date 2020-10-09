@@ -28,6 +28,7 @@ contract NetSepio {
     struct Vote {
         string domainName;
         WebsiteType websiteType;
+        string metadataHash;
     }
 
     mapping(address => User) public Users;
@@ -88,7 +89,8 @@ contract NetSepio {
     function vote(
         string memory _name,
         string memory _domainName,
-        WebsiteType _type
+        WebsiteType _type,
+        string memory _metadataHash
     ) public {
         User storage user = Users[msg.sender];
         // has voting votingRight
@@ -122,7 +124,8 @@ contract NetSepio {
         // vote for the website for the userType
         Vote memory newvote = Vote({
             domainName: _domainName,
-            websiteType: _type
+            websiteType: _type,
+            metadataHash: _metadataHash
         });
         Votes[msg.sender][user.dayCount].push(newvote);
         emit UserVoted(msg.sender, _domainName, _type, block.timestamp);
