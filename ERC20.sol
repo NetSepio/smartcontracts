@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.7.3;
 
 /*
  * @dev Provides information about the current execution context, including the
@@ -23,7 +23,7 @@ abstract contract Context {
     }
 }
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.7.3;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -112,7 +112,7 @@ interface IERC20 {
     );
 }
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.7.3;
 
 /**
  * @dev Wrappers over Solidity's arithmetic operations with added overflow
@@ -282,7 +282,7 @@ library SafeMath {
     }
 }
 
-pragma solidity ^0.6.2;
+pragma solidity ^0.7.3;
 
 /**
  * @dev Collection of functions related to the address type
@@ -464,7 +464,7 @@ library Address {
     }
 }
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.7.3;
 
 /**
  * @dev Implementation of the {IERC20} interface.

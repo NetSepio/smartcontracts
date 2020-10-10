@@ -1,11 +1,15 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.7.3;
 
 import {NS} from "./Token.sol";
 
 contract NetSepio {
+    
     address owner;
     NS token;
-    enum UserType {normal, ip, vip}
+
+    enum UserType {scout, sentry, sentinel}
     struct User {
         UserType userType;
         uint256 balance;
@@ -15,10 +19,10 @@ contract NetSepio {
         uint256 dayCount;
     }
 
-    enum WebsiteType {spam, malware, virus, safe}
-    
+    enum WebsiteType {spyware, malware, phishing, adware, safe}
+    enum WebsiteTag {scam, fake, stereotype, hate}
+
     struct Website {
-        string name;
         string domainName;
         mapping(WebsiteType => uint256) data;
         bool verdict;
@@ -27,6 +31,7 @@ contract NetSepio {
 
     struct Vote {
         string domainName;
+        string websiteURL;
         WebsiteType websiteType;
         string metadataHash;
     }
@@ -38,22 +43,10 @@ contract NetSepio {
     mapping(UserType => uint256) private AwardLimit;
     mapping(address => bool) private AppealForVotingRight;
 
+    // Smart Contract Events
     event UserRegister(address indexed user, uint256 timestamp);
-    event UserVoted(
-        address indexed user,
-        string website,
-        WebsiteType websiteType,
-        uint256 timestamp
-    );
-    event WebsiteVerdict(
-        string indexed domain,
-        bool verdict,
-        uint256 safe,
-        uint256 spam,
-        uint256 virus,
-        uint256 malware,
-        uint256 timestamp
-    );
+    event UserVoted(address indexed user, string website, WebsiteType websiteType, uint256 timestamp);
+    event WebsiteVerdict(string indexed domain, bool verdict, uint256 safe, uint256 adware, uint256 phishing, uint256 malware, uint256 spyware, uint256 timestamp);
     event UserRewarded(address indexed user, uint256 amount, uint256 timestamp);
     event UserVotingRightRevoked(address user, uint256 timestamp);
     event UserVotingRightGranted(address user, uint256 timestamp);
@@ -64,18 +57,18 @@ contract NetSepio {
     constructor(address NSaddress) public {
         token = NS(NSaddress);
         owner = msg.sender;
-        VoteLimit[UserType.normal] = 10;
-        VoteLimit[UserType.ip] = 20;
-        VoteLimit[UserType.vip] = 30;
-        AwardLimit[UserType.normal] = 10;
-        AwardLimit[UserType.ip] = 20;
-        AwardLimit[UserType.vip] = 30;
+        VoteLimit[UserType.scout] = 10;
+        VoteLimit[UserType.sentry] = 20;
+        VoteLimit[UserType.sentinel] = 30;
+        AwardLimit[UserType.scout] = 1;
+        AwardLimit[UserType.sentry] = 2;
+        AwardLimit[UserType.sentinel] = 3;
     }
 
     function register() public {
         require(msg.sender != owner, "Owner can not be a user");
         User memory user = User({
-            userType: UserType.normal,
+            userType: UserType.scout,
             balance: 0,
             totalVotesGiven: 0,
             votingRight: true,
@@ -87,8 +80,8 @@ contract NetSepio {
     }
 
     function vote(
-        string memory _name,
         string memory _domainName,
+        string memory _websiteURL,
         WebsiteType _type,
         string memory _metadataHash
     ) public {
@@ -124,6 +117,7 @@ contract NetSepio {
         // vote for the website for the userType
         Vote memory newvote = Vote({
             domainName: _domainName,
+            websiteURL: _websiteURL,
             websiteType: _type,
             metadataHash: _metadataHash
         });
@@ -136,13 +130,15 @@ contract NetSepio {
         if (site.isExist) {
             site.data[_type]++;
             uint256 safeCount = site.data[WebsiteType.safe];
-            uint256 spamCount = site.data[WebsiteType.spam];
+            uint256 adwareCount = site.data[WebsiteType.adware];
+            uint256 phishingCount = site.data[WebsiteType.phishing];
             uint256 malwareCount = site.data[WebsiteType.malware];
-            uint256 virusCount = site.data[WebsiteType.virus];
+            uint256 spywareCount = site.data[WebsiteType.spyware];
             if (
-                safeCount > spamCount &&
+                safeCount > adwareCount &&
+                safeCount > phishingCount &&
                 safeCount > malwareCount &&
-                safeCount > virusCount
+                safeCount > spywareCount
             ) {
                 site.verdict = true;
             } else {
@@ -153,14 +149,14 @@ contract NetSepio {
                 _domainName,
                 site.verdict,
                 safeCount,
-                spamCount,
-                virusCount,
+                adwareCount,
+                phishingCount,
                 malwareCount,
+                spywareCount,
                 block.timestamp
             );
         } else {
             Website memory newsite = Website({
-                name: _name,
                 domainName: _domainName,
                 verdict: false,
                 isExist: true
@@ -168,20 +164,23 @@ contract NetSepio {
             Websites[_domainName] = newsite;
             Website storage newsite1 = Websites[_domainName];
             newsite1.data[WebsiteType.safe] = 0;
-            newsite1.data[WebsiteType.spam] = 0;
-            newsite1.data[WebsiteType.virus] = 0;
+            newsite1.data[WebsiteType.adware] = 0;
+            newsite1.data[WebsiteType.phishing] = 0;
             newsite1.data[WebsiteType.malware] = 0;
+            newsite1.data[WebsiteType.spyware] = 0;
             newsite1.data[_type]++;
             if (_type == WebsiteType.safe) {
                 newsite1.verdict = true;
             }
             emit WebsiteVerdict(
                 _domainName,
+                _websiteURL,
                 newsite1.verdict,
                 newsite1.data[WebsiteType.safe],
-                newsite1.data[WebsiteType.spam],
-                newsite1.data[WebsiteType.virus],
+                newsite1.data[WebsiteType.adware],
+                newsite1.data[WebsiteType.phishing],
                 newsite1.data[WebsiteType.malware],
+                newsite1.data[WebsiteType.spyware],
                 block.timestamp
             );
         }
@@ -246,9 +245,10 @@ contract NetSepio {
         Website storage site = Websites[domainName];
         uint256[] memory data;
         data[0] = site.data[WebsiteType.safe];
-        data[1] = site.data[WebsiteType.spam];
-        data[2] = site.data[WebsiteType.malware];
-        data[3] = site.data[WebsiteType.virus];
+        data[1] = site.data[WebsiteType.adware];
+        data[2] = site.data[WebsiteType.phishing];
+        data[3] = site.data[WebsiteType.malware];
+        data[4] = site.data[WebsiteType.spyware];
         return data;
     }
 }
