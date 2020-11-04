@@ -14,7 +14,7 @@ contract NetSepio {
         UserType userType;
         uint256 balance;
         uint256 totalVotesGiven;
-        bool votingRight;
+        bool votingRights;
         uint256 joinedOnDate;
         uint256 dayCount;
     }
@@ -24,8 +24,8 @@ contract NetSepio {
 
     struct Website {
         string domainName;
-        mapping(WebsiteType => uint256) data;
-        bool verdict;
+        mapping(WebsiteType => uint256) typeData;
+        mapping(WebsiteTag => uint256) tagData;
         bool isExist;
     }
 
@@ -33,6 +33,7 @@ contract NetSepio {
         string domainName;
         string websiteURL;
         WebsiteType websiteType;
+        WebsiteTag websiteTag;
         string metadataHash;
     }
 
@@ -46,15 +47,14 @@ contract NetSepio {
     // Smart Contract Events
     event UserRegister(address indexed user, uint256 timestamp);
     event UserVoted(address indexed user, string website, WebsiteType websiteType, uint256 timestamp);
-    event WebsiteVerdict(string indexed domain, bool verdict, uint256 safe, uint256 adware, uint256 phishing, uint256 malware, uint256 spyware, uint256 timestamp);
     event UserRewarded(address indexed user, uint256 amount, uint256 timestamp);
     event UserVotingRightRevoked(address user, uint256 timestamp);
     event UserVotingRightGranted(address user, uint256 timestamp);
     event UserAppealForVotingRight(address user, uint256 timestamp);
-    event UpdatedAwardLimit(UserType _type, uint256 limit, uint256 timestamp);
-    event UpdatedVotingLimit(UserType _type, uint256 limit, uint256 timestamp);
+    event UpdatedAwardLimit(UserType _websiteType, uint256 limit, uint256 timestamp);
+    event UpdatedVotingLimit(UserType _websiteType, uint256 limit, uint256 timestamp);
 
-    constructor(address NSaddress) public {
+    constructor(address NSaddress) {
         token = NS(NSaddress);
         owner = msg.sender;
         VoteLimit[UserType.scout] = 10;
@@ -71,7 +71,7 @@ contract NetSepio {
             userType: UserType.scout,
             balance: 0,
             totalVotesGiven: 0,
-            votingRight: true,
+            votingRights: true,
             joinedOnDate: block.timestamp,
             dayCount: 0
         });
@@ -82,13 +82,14 @@ contract NetSepio {
     function vote(
         string memory _domainName,
         string memory _websiteURL,
-        WebsiteType _type,
+        WebsiteType _websiteType,
+        WebsiteTag _websiteTag,
         string memory _metadataHash
     ) public {
         User storage user = Users[msg.sender];
-        // has voting votingRight
+        // has voting votingRights
         require(
-            user.votingRight,
+            user.votingRights,
             "You do not have voting right now, please appeal in case you have been banned"
         );
         // has daily votes count left
@@ -118,71 +119,29 @@ contract NetSepio {
         Vote memory newvote = Vote({
             domainName: _domainName,
             websiteURL: _websiteURL,
-            websiteType: _type,
+            websiteType: _websiteType,
+            websiteTag: _websiteTag,
             metadataHash: _metadataHash
         });
         Votes[msg.sender][user.dayCount].push(newvote);
-        emit UserVoted(msg.sender, _domainName, _type, block.timestamp);
+        emit UserVoted(msg.sender, _domainName, _websiteType, block.timestamp);
 
         // update website data too
         Website storage site = Websites[_domainName];
 
         if (site.isExist) {
-            site.data[_type]++;
-            uint256 safeCount = site.data[WebsiteType.safe];
-            uint256 adwareCount = site.data[WebsiteType.adware];
-            uint256 phishingCount = site.data[WebsiteType.phishing];
-            uint256 malwareCount = site.data[WebsiteType.malware];
-            uint256 spywareCount = site.data[WebsiteType.spyware];
-            if (
-                safeCount > adwareCount &&
-                safeCount > phishingCount &&
-                safeCount > malwareCount &&
-                safeCount > spywareCount
-            ) {
-                site.verdict = true;
-            } else {
-                site.verdict = false;
-            }
-
-            emit WebsiteVerdict(
-                _domainName,
-                site.verdict,
-                safeCount,
-                adwareCount,
-                phishingCount,
-                malwareCount,
-                spywareCount,
-                block.timestamp
-            );
+            site.typeData[_websiteType]++;
+            site.tagData[_websiteTag]++;
         } else {
-            Website memory newsite = Website({
-                domainName: _domainName,
-                verdict: false,
-                isExist: true
-            });
-            Websites[_domainName] = newsite;
-            Website storage newsite1 = Websites[_domainName];
-            newsite1.data[WebsiteType.safe] = 0;
-            newsite1.data[WebsiteType.adware] = 0;
-            newsite1.data[WebsiteType.phishing] = 0;
-            newsite1.data[WebsiteType.malware] = 0;
-            newsite1.data[WebsiteType.spyware] = 0;
-            newsite1.data[_type]++;
-            if (_type == WebsiteType.safe) {
-                newsite1.verdict = true;
-            }
-            emit WebsiteVerdict(
-                _domainName,
-                _websiteURL,
-                newsite1.verdict,
-                newsite1.data[WebsiteType.safe],
-                newsite1.data[WebsiteType.adware],
-                newsite1.data[WebsiteType.phishing],
-                newsite1.data[WebsiteType.malware],
-                newsite1.data[WebsiteType.spyware],
-                block.timestamp
-            );
+            Website storage newWebSite = Websites[_domainName];
+            newWebSite.domainName = _domainName;
+            newWebSite.isExist = true;
+            newWebSite.typeData[WebsiteType.safe] = 0;
+            newWebSite.typeData[WebsiteType.adware] = 0;
+            newWebSite.typeData[WebsiteType.phishing] = 0;
+            newWebSite.typeData[WebsiteType.malware] = 0;
+            newWebSite.typeData[WebsiteType.spyware] = 0;
+            newWebSite.typeData[_websiteType]++;
         }
 
         // mint token for the user and update balance
@@ -199,7 +158,7 @@ contract NetSepio {
     function appealForVotingRight() public {
         require(msg.sender != owner, "Owner can not appeal");
         User storage user = Users[msg.sender];
-        require(!user.votingRight, "You have voting right now also");
+        require(!user.votingRights, "You have voting right now also");
         AppealForVotingRight[msg.sender] = true;
         emit UserAppealForVotingRight(msg.sender, block.timestamp);
     }
@@ -207,7 +166,7 @@ contract NetSepio {
     function revokeVotingRight(address _user) public {
         require(msg.sender == owner, "Only owner can block user");
         User storage user = Users[_user];
-        user.votingRight = false;
+        user.votingRights = false;
         emit UserVotingRightRevoked(msg.sender, block.timestamp);
     }
 
@@ -221,20 +180,20 @@ contract NetSepio {
             "User should appeal first for voting right"
         );
         User storage user = Users[_user];
-        user.votingRight = true;
+        user.votingRights = true;
         emit UserVotingRightGranted(msg.sender, block.timestamp);
     }
 
-    function setVotingLimit(UserType _type, uint256 limit) public {
+    function setVotingLimit(UserType _userType, uint256 limit) public {
         require(msg.sender == owner, "Only owner can set limit");
-        VoteLimit[_type] = limit;
-        emit UpdatedVotingLimit(_type, limit, block.timestamp);
+        VoteLimit[_userType] = limit;
+        emit UpdatedVotingLimit(_userType, limit, block.timestamp);
     }
 
-    function setAwardLimit(UserType _type, uint256 award) public {
+    function setAwardLimit(UserType _userType, uint256 award) public {
         require(msg.sender == owner, "Only owner can set limit");
-        AwardLimit[_type] = award;
-        emit UpdatedVotingLimit(_type, award, block.timestamp);
+        AwardLimit[_userType] = award;
+        emit UpdatedVotingLimit(_userType, award, block.timestamp);
     }
 
     function getWebsiteVotingDetails(string memory domainName)
@@ -244,11 +203,11 @@ contract NetSepio {
     {
         Website storage site = Websites[domainName];
         uint256[] memory data;
-        data[0] = site.data[WebsiteType.safe];
-        data[1] = site.data[WebsiteType.adware];
-        data[2] = site.data[WebsiteType.phishing];
-        data[3] = site.data[WebsiteType.malware];
-        data[4] = site.data[WebsiteType.spyware];
+        data[0] = site.typeData[WebsiteType.safe];
+        data[1] = site.typeData[WebsiteType.adware];
+        data[2] = site.typeData[WebsiteType.phishing];
+        data[3] = site.typeData[WebsiteType.malware];
+        data[4] = site.typeData[WebsiteType.spyware];
         return data;
     }
 }
