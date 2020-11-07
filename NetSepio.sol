@@ -42,17 +42,16 @@ contract NetSepio {
     mapping(address => mapping(uint256 => Vote[])) public Votes;
     mapping(UserType => uint256) private VoteLimit;
     mapping(UserType => uint256) private AwardLimit;
-    mapping(address => bool) private AppealForVotingRight;
+    mapping(address => bool) private AppealForVotingRights;
 
     // Smart Contract Events
     event UserRegister(address indexed user, uint256 timestamp);
-    event UserVoted(address indexed user, string website, WebsiteType websiteType, uint256 timestamp);
+    event UserVoted(address indexed user, string domain, string websiteURL, WebsiteType websiteType, WebsiteTag websiteTag, uint256 timestamp);
     event UserRewarded(address indexed user, uint256 amount, uint256 timestamp);
-    event UserVotingRightRevoked(address user, uint256 timestamp);
-    event UserVotingRightGranted(address user, uint256 timestamp);
-    event UserAppealForVotingRight(address user, uint256 timestamp);
-    event UpdatedAwardLimit(UserType _websiteType, uint256 limit, uint256 timestamp);
-    event UpdatedVotingLimit(UserType _websiteType, uint256 limit, uint256 timestamp);
+    event UserVotingRightsRevoked(address user, uint256 timestamp);
+    event UserVotingRightsGranted(address user, uint256 timestamp);
+    event UserAppealForVotingRights(address user, uint256 timestamp);
+    event UpdatedVotingAndRewardsLimit(UserType _userType, uint256 dailyLimit, uint256 rewards, uint256 timestamp);
 
     constructor(address NSaddress) {
         token = NS(NSaddress);
@@ -87,22 +86,14 @@ contract NetSepio {
         string memory _metadataHash
     ) public {
         User storage user = Users[msg.sender];
-        // has voting votingRights
-        require(
-            user.votingRights,
-            "You do not have voting right now, please appeal in case you have been banned"
-        );
+        // Check for voting rights
+        require(user.votingRights, "You do not have voting rights, please appeal in case you have been banned");
         // has daily votes count left
-        uint256 daysTillJoin = (block.timestamp - user.joinedOnDate) /
-            60 /
-            60 /
-            24;
+        uint256 daysTillJoin = (block.timestamp - user.joinedOnDate) / 60 / 60 / 24;
         user.dayCount = daysTillJoin;
         uint256 dailyVoteCount = Votes[msg.sender][user.dayCount].length;
-        require(
-            dailyVoteCount < VoteLimit[user.userType],
-            "You do not have enough votes left for today"
-        );
+        // Check for daily voting limits
+        require(dailyVoteCount < VoteLimit[user.userType], "You do not have enough votes left for today");
 
         // one domain one vote by one user
         bool userAlreadyVoted = false;
@@ -113,6 +104,7 @@ contract NetSepio {
             }
         }
 
+        // check if user already voted for this domain
         require(!userAlreadyVoted, "You have already voted for this domain");
 
         // vote for the website for the userType
@@ -124,8 +116,7 @@ contract NetSepio {
             metadataHash: _metadataHash
         });
         Votes[msg.sender][user.dayCount].push(newvote);
-        emit UserVoted(msg.sender, _domainName, _websiteType, block.timestamp);
-
+        
         // update website data too
         Website storage site = Websites[_domainName];
 
@@ -142,72 +133,67 @@ contract NetSepio {
             newWebSite.typeData[WebsiteType.malware] = 0;
             newWebSite.typeData[WebsiteType.spyware] = 0;
             newWebSite.typeData[_websiteType]++;
+            newWebSite.tagData[WebsiteTag.scam] = 0;
+            newWebSite.tagData[WebsiteTag.fake] = 0;
+            newWebSite.tagData[WebsiteTag.stereotype] = 0;
+            newWebSite.tagData[WebsiteTag.hate] = 0;
+            newWebSite.tagData[_websiteTag]++;
         }
+
+        emit UserVoted(msg.sender, _domainName, _websiteURL, _websiteType, _websiteTag, block.timestamp);
 
         // mint token for the user and update balance
         user.totalVotesGiven++;
         user.balance += AwardLimit[user.userType];
         token._mint(msg.sender, AwardLimit[user.userType]);
-        emit UserRewarded(
-            msg.sender,
-            AwardLimit[user.userType],
-            block.timestamp
-        );
+        emit UserRewarded(msg.sender, AwardLimit[user.userType], block.timestamp);
     }
 
-    function appealForVotingRight() public {
+    function appealForVotingRights() public {
         require(msg.sender != owner, "Owner can not appeal");
         User storage user = Users[msg.sender];
-        require(!user.votingRights, "You have voting right now also");
-        AppealForVotingRight[msg.sender] = true;
-        emit UserAppealForVotingRight(msg.sender, block.timestamp);
+        require(!user.votingRights, "You already have voting rights");
+        AppealForVotingRights[msg.sender] = true;
+        emit UserAppealForVotingRights(msg.sender, block.timestamp);
     }
 
     function revokeVotingRight(address _user) public {
         require(msg.sender == owner, "Only owner can block user");
         User storage user = Users[_user];
         user.votingRights = false;
-        emit UserVotingRightRevoked(msg.sender, block.timestamp);
+        emit UserVotingRightsRevoked(_user, block.timestamp);
     }
 
-    function grantVotingRightAfterAppeal(address _user) public {
-        require(
-            msg.sender == owner,
-            "Only owner can grant voting right to user"
-        );
-        require(
-            AppealForVotingRight[_user],
-            "User should appeal first for voting right"
-        );
+    function grantVotingRightsAfterAppeal(address _user) public {
+        require(msg.sender == owner, "Only owner can grant voting rights to user");
+        require(AppealForVotingRights[_user], "User should appeal first for voting rights");
         User storage user = Users[_user];
         user.votingRights = true;
-        emit UserVotingRightGranted(msg.sender, block.timestamp);
+        AppealForVotingRights[_user] = false;
+        emit UserVotingRightsGranted(_user, block.timestamp);
     }
 
-    function setVotingLimit(UserType _userType, uint256 limit) public {
-        require(msg.sender == owner, "Only owner can set limit");
-        VoteLimit[_userType] = limit;
-        emit UpdatedVotingLimit(_userType, limit, block.timestamp);
+    function setVotingLimit(UserType _userType, uint256 _dailyLimit, uint256 _rewards) public {
+        require(msg.sender == owner, "Only owner can set daily voting limit");
+        VoteLimit[_userType] = _dailyLimit;
+        AwardLimit[_userType] = _rewards;
+        emit UpdatedVotingAndRewardsLimit(_userType, _dailyLimit, _rewards, block.timestamp);
     }
 
-    function setAwardLimit(UserType _userType, uint256 award) public {
-        require(msg.sender == owner, "Only owner can set limit");
-        AwardLimit[_userType] = award;
-        emit UpdatedVotingLimit(_userType, award, block.timestamp);
-    }
-
-    function getWebsiteVotingDetails(string memory domainName)
+    function getWebsiteVotingDetails(string memory _domainName)
         public
         view
-        returns (uint256[] memory)
+        returns (uint256 spyware, uint256 malware, uint256 phishing, uint256 adware, uint256 safe, uint256 scam, uint256 fake, uint256 stereotype, uint256 hate)
     {
-        Website storage site = Websites[domainName];
-        uint256[] memory data;
-        data[0] = site.typeData[WebsiteType.safe];
-        data[1] = site.typeData[WebsiteType.adware];
-        data[2] = site.typeData[WebsiteType.phishing];
-        data[3] = site.typeData[WebsiteType.malware];
-        data[4] = site.typeData[WebsiteType.spyware];
-        return data;
+        Website storage website = Websites[_domainName];
+        spyware = website.typeData[WebsiteType.spyware];
+        malware = website.typeData[WebsiteType.malware];
+        phishing = website.typeData[WebsiteType.phishing];
+        adware = website.typeData[WebsiteType.adware];
+        safe = website.typeData[WebsiteType.safe];
+        scam = website.tagData[WebsiteTag.scam];
+        fake = website.tagData[WebsiteTag.fake];
+        stereotype = website.tagData[WebsiteTag.stereotype];
+        hate = website.tagData[WebsiteTag.hate];
     }
 }
