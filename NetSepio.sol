@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.7.3;
+pragma solidity ^0.7.5;
 
-import {NS} from "./Token.sol";
+import "./ERC20.sol";
 
-contract NetSepio {
+contract NetSepio is ERC20 {
     
     address owner;
-    NS token;
 
     enum UserType {scout, sentry, sentinel}
     struct User {
@@ -20,7 +19,7 @@ contract NetSepio {
     }
 
     enum WebsiteType {spyware, malware, phishing, adware, safe}
-    enum WebsiteTag {scam, fake, stereotype, hate}
+    enum WebsiteTag {scam, fake, stereotype, hate, genuine}
 
     struct Website {
         string domainName;
@@ -53,8 +52,7 @@ contract NetSepio {
     event UserAppealForVotingRights(address user, uint256 timestamp);
     event UpdatedVotingAndRewardsLimit(UserType _userType, uint256 dailyLimit, uint256 rewards, uint256 timestamp);
 
-    constructor(address NSaddress) {
-        token = NS(NSaddress);
+    constructor () ERC20("NetSepio", "NST") {
         owner = msg.sender;
         VoteLimit[UserType.scout] = 10;
         VoteLimit[UserType.sentry] = 20;
@@ -137,6 +135,7 @@ contract NetSepio {
             newWebSite.tagData[WebsiteTag.fake] = 0;
             newWebSite.tagData[WebsiteTag.stereotype] = 0;
             newWebSite.tagData[WebsiteTag.hate] = 0;
+            newWebSite.tagData[WebsiteTag.genuine] = 0;
             newWebSite.tagData[_websiteTag]++;
         }
 
@@ -145,7 +144,7 @@ contract NetSepio {
         // mint token for the user and update balance
         user.totalVotesGiven++;
         user.balance += AwardLimit[user.userType];
-        token._mint(msg.sender, AwardLimit[user.userType]);
+        _mint(msg.sender, AwardLimit[user.userType]);
         emit UserRewarded(msg.sender, AwardLimit[user.userType], block.timestamp);
     }
 
@@ -183,7 +182,7 @@ contract NetSepio {
     function getWebsiteVotingDetails(string memory _domainName)
         public
         view
-        returns (uint256 spyware, uint256 malware, uint256 phishing, uint256 adware, uint256 safe, uint256 scam, uint256 fake, uint256 stereotype, uint256 hate)
+        returns (uint256 spyware, uint256 malware, uint256 phishing, uint256 adware, uint256 safe, uint256 scam, uint256 fake, uint256 stereotype, uint256 hate, uint256 genuine)
     {
         Website storage website = Websites[_domainName];
         spyware = website.typeData[WebsiteType.spyware];
@@ -195,5 +194,6 @@ contract NetSepio {
         fake = website.tagData[WebsiteTag.fake];
         stereotype = website.tagData[WebsiteTag.stereotype];
         hate = website.tagData[WebsiteTag.hate];
+        genuine = website.tagData[WebsiteTag.genuine];
     }
 }
