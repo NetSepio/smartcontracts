@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.7.5;
+pragma solidity ^0.8.3;
 
-import "./ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract NetSepio is ERC20 {
-    
+
     address owner;
 
     enum UserType {scout, sentry, sentinel}
@@ -114,7 +114,7 @@ contract NetSepio is ERC20 {
             metadataHash: _metadataHash
         });
         Votes[msg.sender][user.dayCount].push(newvote);
-        
+
         // update website data too
         Website storage site = Websites[_domainName];
 
