@@ -43,8 +43,20 @@ contract NetSepio is
 
     string private _baseTokenURI;
 
+    struct WebsiteReview {
+        string domainName;
+        string websiteURL;
+        string websiteType;
+        string websiteTag;
+        string websiteSafety;
+        string metadataHash;
+    }
+
+    mapping(uint256 => WebsiteReview) public WebsiteReviews;
+
     event ReviewCreation(address indexed minter, uint256 indexed tokenId, uint256 indexed timestamp);
     event ReviewDeletion(address indexed ownerOrApproved, uint256 indexed tokenId, uint256 indexed timestamp);
+    event ReviewUpdate(address indexed ownerOrApproved, uint256 indexed tokenId, string oldMetadataHash, string newMetadatHash, uint256 indexed timestamp);
 
     /**
      * @dev Grants `DEFAULT_ADMIN_ROLE`, `VOTER_ROLE` and `MODERATOR_ROLE` to the
@@ -81,15 +93,27 @@ contract NetSepio is
      *
      * - the caller must have the `VOTER_ROLE`.
      */
-    function createReview(address to) public virtual {
+    function createReview(string memory _domainName, string memory _websiteURL, string memory _websiteType, string memory _websiteTag, string memory _websiteSafety, string memory _metadataHash) public virtual {
         require(hasRole(VOTER_ROLE, _msgSender()), "NetSepio: must have voter role to submit review");
 
         // We cannot just use balanceOf to create the new tokenId because tokens
         // can be burned (destroyed), so we need a separate counter.
         uint256 tokenId = _tokenIdTracker.current();
-        _safeMint(to, tokenId);
+        _safeMint(_msgSender(), tokenId);
+        
+        // Create Mapping
+        WebsiteReview memory websiteReview = WebsiteReview({
+            domainName: _domainName,
+            websiteURL: _websiteURL,
+            websiteType: _websiteType,
+            websiteTag: _websiteTag,
+            websiteSafety: _websiteSafety,
+            metadataHash: _metadataHash
+        });
+        WebsiteReviews[tokenId] = websiteReview;
+
         _tokenIdTracker.increment();
-        emit ReviewCreation(to, tokenId, block.timestamp);
+        emit ReviewCreation(_msgSender(), tokenId, block.timestamp);
     }
 
     /**
@@ -108,6 +132,34 @@ contract NetSepio is
     }
 
     /**
+    * @dev Reads the metadata of a specified token. Returns the current data in
+    * storage of `tokenId`.
+    *
+    * @param tokenId The token to read the data off.
+    *
+    * @return A string representing the current metadataHash mapped with the tokenId.
+    */
+    function readMetadata(uint256 tokenId) public virtual view returns (string memory) {
+        return WebsiteReviews[tokenId].metadataHash;
+    }
+
+    /**
+    * @dev Updates the metadata of a specified token. Writes `newMetadataHash` into storage
+    * of `tokenId`.
+    *
+    * @param tokenId The token to write metadata to.
+    * @param newMetadataHash The metadata to be written to the token.
+    *
+    * Emits a `ReviewUpdate` event.
+    */
+    function updateReview(uint256 tokenId, string memory newMetadataHash) public virtual {
+        require(hasRole(VOTER_ROLE, _msgSender()), "NetSepio: caller is not owner nor approved to update review");
+
+        emit ReviewUpdate(_msgSender(), tokenId, WebsiteReviews[tokenId].metadataHash, newMetadataHash, block.timestamp);
+        WebsiteReviews[tokenId].metadataHash = newMetadataHash;
+    }
+
+    /**
      * @dev Pauses all token transfers.
      *
      * See {ERC721Pausable} and {Pausable-_pause}.
@@ -117,7 +169,7 @@ contract NetSepio is
      * - the caller must have the `MODERATOR_ROLE`.
      */
     function pause() public virtual {
-        require(hasRole(MODERATOR_ROLE, _msgSender()), "NetSepio: must have pauser role to pause");
+        require(hasRole(MODERATOR_ROLE, _msgSender()), "NetSepio: must have moderator role to pause");
         _pause();
     }
 
@@ -131,7 +183,7 @@ contract NetSepio is
      * - the caller must have the `MODERATOR_ROLE`.
      */
     function unpause() public virtual {
-        require(hasRole(MODERATOR_ROLE, _msgSender()), "NetSepio: must have pauser role to unpause");
+        require(hasRole(MODERATOR_ROLE, _msgSender()), "NetSepio: must have moderator role to unpause");
         _unpause();
     }
 
