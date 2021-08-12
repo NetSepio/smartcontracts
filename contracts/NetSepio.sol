@@ -50,9 +50,23 @@ contract NetSepio is
 
     mapping(uint256 => WebsiteReview) public WebsiteReviews;
 
-    event ReviewCreation(address indexed minter, uint256 indexed tokenId, uint256 indexed timestamp);
+    event ReviewCreation(
+        address indexed receiver, 
+        uint256 indexed tokenId, 
+        uint256 indexed timestamp,
+        string _domainName, 
+        string _websiteURL, 
+        string _websiteType, 
+        string _websiteTag, 
+        string _websiteSafety, 
+        string _metadataHash
+        );
+
+
     event ReviewDeletion(address indexed ownerOrApproved, uint256 indexed tokenId, uint256 indexed timestamp);
     event ReviewUpdate(address indexed ownerOrApproved, uint256 indexed tokenId, string oldMetadataHash, string newMetadatHash, uint256 indexed timestamp);
+
+    event baseURIchanged(address indexed admin, string newBaseURI);
 
     /**
      * @dev Grants `DEFAULT_ADMIN_ROLE`, `VOTER_ROLE` and `MODERATOR_ROLE` to the
@@ -69,14 +83,15 @@ contract NetSepio is
         _baseTokenURI = baseTokenURI;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-
         _setupRole(VOTER_ROLE, _msgSender());
         _setupRole(MODERATOR_ROLE, _msgSender());
+
+        _setRoleAdmin(MODERATOR_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(VOTER_ROLE, DEFAULT_ADMIN_ROLE);
+
+
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return _baseTokenURI;
-    }
 
     /**
      * @dev Creates a new token for `to`. Its token ID will be automatically
@@ -89,8 +104,15 @@ contract NetSepio is
      *
      * - the caller must have the `VOTER_ROLE`.
      */
-    function createReview(string memory _domainName, string memory _websiteURL, string memory _websiteType, string memory _websiteTag, string memory _websiteSafety, string memory _metadataHash) public virtual {
-        require(hasRole(VOTER_ROLE, _msgSender()), "NetSepio: must have voter role to submit review");
+    function createReview(
+            string memory _domainName, 
+            string memory _websiteURL, 
+            string memory _websiteType, 
+            string memory _websiteTag, 
+            string memory _websiteSafety, 
+            string memory _metadataHash
+        ) public onlyRole(VOTER_ROLE) {
+        // require(hasRole(VOTER_ROLE, _msgSender()), "NetSepio: must have voter role to submit review");
 
         // We cannot just use balanceOf to create the new tokenId because tokens
         // can be burned (destroyed), so we need a separate counter.
@@ -109,7 +131,53 @@ contract NetSepio is
         WebsiteReviews[tokenId] = websiteReview;
 
         _tokenIdTracker.increment();
-        emit ReviewCreation(_msgSender(), tokenId, block.timestamp);
+
+        emit ReviewCreation(
+            _msgSender(), 
+            tokenId, 
+            block.timestamp,
+            _domainName, 
+            _websiteURL, 
+            _websiteType, 
+            _websiteTag, 
+            _websiteSafety, 
+            _metadataHash
+            );
+    }
+
+    function createReviewbyModerator(
+        string memory _domainName, 
+        string memory _websiteURL, 
+        string memory _websiteType, 
+        string memory _websiteTag, 
+        string memory _websiteSafety, 
+        string memory _metadataHash,
+        address _to
+    ) public onlyRole(MODERATOR_ROLE) {
+        uint256 tokenId = mintbyModerator(_to);
+
+                // Create Mapping
+        WebsiteReview memory websiteReview = WebsiteReview({
+            domainName: _domainName,
+            websiteURL: _websiteURL,
+            websiteType: _websiteType,
+            websiteTag: _websiteTag,
+            websiteSafety: _websiteSafety,
+            metadataHash: _metadataHash
+        });
+        WebsiteReviews[tokenId] = websiteReview;
+
+        emit ReviewCreation(
+            _to, 
+            tokenId, 
+            block.timestamp,
+            _domainName, 
+            _websiteURL, 
+            _websiteType, 
+            _websiteTag, 
+            _websiteSafety, 
+            _metadataHash
+            );
     }
 
     /**
@@ -148,8 +216,9 @@ contract NetSepio is
     *
     * Emits a `ReviewUpdate` event.
     */
-    function updateReview(uint256 tokenId, string memory newMetadataHash) public virtual {
-        require(hasRole(VOTER_ROLE, _msgSender()), "NetSepio: caller is not owner nor approved to update review");
+    function updateReview(uint256 tokenId, string memory newMetadataHash) public {
+        // require(hasRole(VOTER_ROLE, _msgSender()), "NetSepio: caller is not owner nor approved to update review");
+        require(hasRole(MODERATOR_ROLE, _msgSender()) || _isApprovedOrOwner(_msgSender(), tokenId), "NetSepio: Sorry, caller do not have the authority");
 
         emit ReviewUpdate(_msgSender(), tokenId, WebsiteReviews[tokenId].metadataHash, newMetadataHash, block.timestamp);
         WebsiteReviews[tokenId].metadataHash = newMetadataHash;
@@ -203,4 +272,23 @@ contract NetSepio is
     {
         return super.supportsInterface(interfaceId);
     }
+
+    function changeBaseURI(string memory newBaseURI) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _baseTokenURI = newBaseURI;
+
+        emit baseURIchanged(_msgSender(), newBaseURI);
+    } 
+
+
+    /** ========== internal mutatvie functions ========== */
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseTokenURI;
+    }
+
+    function mintbyModerator(address _to) internal onlyRole(MODERATOR_ROLE) returns (uint256 tokenId) {
+        tokenId = _tokenIdTracker.current();
+        _safeMint(_to, tokenId);
+        _tokenIdTracker.increment();
+    }
+
 }
