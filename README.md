@@ -19,5 +19,7 @@ Build completed: QmZ5R3gSFC8MjkGZ2krBq8w3QZzzR76fbzLvbUwhN2wg3J
 Deployed to https://thegraph.com/studio/subgraph/net
 
 Subgraph endpoints:
+
 Queries (HTTP):     https://api.studio.thegraph.com/query/5758/net/v0.0.1
+
 Subscriptions (WS): https://api.studio.thegraph.com/query/5758/net/v0.0.1
