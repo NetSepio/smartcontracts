@@ -12,7 +12,7 @@ default moderator: 0x2dA0a615981C2c9c70E34b8f50Db5f5a905E7928
 
 ---
 
-#The graph setting:
+# The graph setting:
 
 Build completed: QmZ5R3gSFC8MjkGZ2krBq8w3QZzzR76fbzLvbUwhN2wg3J
 
