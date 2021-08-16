@@ -37,3 +37,5 @@ Subgraph endpoints:
 Queries (HTTP):     https://api.studio.thegraph.com/query/5758/net1/v0.0.1
 
 Subscriptions (WS): https://api.studio.thegraph.com/query/5758/net1/v0.0.1
+
+https://testnet.thegraph.com/subgraph?id=0x6a453a70f6fac3abef56e1cb6741b06a25b9e9fb-0&view=Overview
