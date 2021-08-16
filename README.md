@@ -12,7 +12,7 @@ default moderator: 0x2dA0a615981C2c9c70E34b8f50Db5f5a905E7928
 
 ---
 
-# The graph setting:
+# The graph setting(mumbai):
 
 Build completed: QmZ5R3gSFC8MjkGZ2krBq8w3QZzzR76fbzLvbUwhN2wg3J
 
@@ -23,3 +23,17 @@ Subgraph endpoints:
 Queries (HTTP):     https://api.studio.thegraph.com/query/5758/net/v0.0.1
 
 Subscriptions (WS): https://api.studio.thegraph.com/query/5758/net/v0.0.1
+
+
+
+# The graph setting(rinkeby):
+
+Build completed: QmUaBWDjKafMzvHS7TkEFPQYkA22XBn5JWjj1cKJRjj87K
+
+Deployed to https://thegraph.com/studio/subgraph/net1
+
+Subgraph endpoints:
+
+Queries (HTTP):     https://api.studio.thegraph.com/query/5758/net1/v0.0.1
+
+Subscriptions (WS): https://api.studio.thegraph.com/query/5758/net1/v0.0.1
