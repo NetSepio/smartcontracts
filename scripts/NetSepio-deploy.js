@@ -15,8 +15,9 @@ async function main() {
 
 	// We get the contract to deploy
 	const netSepio = await hre.ethers.getContractFactory("NetSepio");
-	await netSepio.deployed();
-	console.log("NetSepio deployed to:", netSepio.address);
+	const c = await netSepio.deploy();
+	await c.deployed();
+	console.log("NetSepio deployed to:", c.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -1,0 +1,12 @@
+type Review @entity {
+  id: ID!
+  category: String!
+  domainAddress: String!
+  siteURL: String!
+  siteType: String!
+  siteTag: String!
+  siteSafety: String!
+  metaDataUri: String!
+  reviewBy: Bytes!
+  deleted: Boolean!
+}

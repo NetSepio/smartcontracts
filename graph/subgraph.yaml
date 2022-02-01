@@ -1,0 +1,29 @@
+specVersion: 0.0.2
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: NetSepio
+    network: mumbai
+    source:
+      address: "0x0C44C0296E265105E14d1b81b99ab39756190304"
+      abi: NetSepio
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - ReviewCreated
+        - ReviewDeleted
+        - ReviewUpdated
+      abis:
+        - name: NetSepio
+          file: ./abis/NetSepio.json
+      eventHandlers:
+        - event: ReviewCreated(indexed address,indexed uint256,string,string,string,string,string,string,string)
+          handler: handleReviewCreated
+        - event: ReviewDeleted(indexed address,indexed uint256)
+          handler: handleReviewDeleted
+        - event: ReviewUpdated(indexed address,indexed uint256,string,string)
+          handler: handleReviewUpdated
+      file: ./src/mapping.ts

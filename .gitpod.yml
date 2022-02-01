@@ -1,0 +1,8 @@
+tasks:
+  - init: |
+      npm install
+      cd graph && yarn && cd -
+vscode:
+  extensions:
+    - dbaeumer.vscode-eslint
+    - juanblanco.solidity
