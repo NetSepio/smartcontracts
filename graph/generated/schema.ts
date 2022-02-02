@@ -25,6 +25,7 @@ export class Review extends Entity {
     this.set("metaDataUri", Value.fromString(""));
     this.set("reviewBy", Value.fromBytes(Bytes.empty()));
     this.set("deleted", Value.fromBoolean(false));
+    this.set("infoHash", Value.fromString(""));
   }
 
   save(): void {
@@ -132,5 +133,14 @@ export class Review extends Entity {
 
   set deleted(value: boolean) {
     this.set("deleted", Value.fromBoolean(value));
+  }
+
+  get infoHash(): string {
+    let value = this.get("infoHash");
+    return value!.toString();
+  }
+
+  set infoHash(value: string) {
+    this.set("infoHash", Value.fromString(value));
   }
 }

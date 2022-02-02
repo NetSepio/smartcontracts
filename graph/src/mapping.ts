@@ -18,6 +18,7 @@ export function handleReviewCreated(event: ReviewCreated): void {
   review.metaDataUri = event.params.metadataURI;
   review.reviewBy = event.params.receiver;
   review.deleted = false;
+  review.infoHash = ""
   review.save()
 }
 
@@ -32,7 +33,7 @@ export function handleReviewDeleted(event: ReviewDeleted): void {
 export function handleReviewUpdated(event: ReviewUpdated): void {
   const review = Review.load(event.params.tokenId.toString())
   if (review) {
-    review.metaDataUri = event.params.newInfoHash
+    review.infoHash = event.params.newInfoHash
     review.save()
   }
 }
