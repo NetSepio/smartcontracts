@@ -40,7 +40,7 @@ contract NetSepio is
 
     Counters.Counter private _tokenIdTracker;
 
-    string private _baseTokenURI;
+    mapping(uint256 => string) private _tokenURI;
 
     struct Review {
         string category;
@@ -90,8 +90,6 @@ contract NetSepio is
     function createReview(string memory category, string memory domainAddress, string memory siteURL, string memory siteType, string memory siteTag, string memory siteSafety, string memory metadataURI) public nonReentrant onlyRole(NETSEPIO_VOTER_ROLE) {
         require(hasRole(NETSEPIO_VOTER_ROLE, _msgSender()), "NetSepio: must have voter role to submit review");
 
-        // We cannot just use balanceOf to create the new tokenId because tokens
-        // can be burned (destroyed), so we need a separate counter.
         uint256 tokenId = _tokenIdTracker.current();
         _safeMint(_msgSender(), tokenId);
         
@@ -106,21 +104,14 @@ contract NetSepio is
             infoHash: ""
         });
         Reviews[tokenId] = review;
+        _tokenURI[tokenId] = metadataURI;
         _tokenIdTracker.increment();
 
         emit ReviewCreated(_msgSender(), tokenId, category, domainAddress, siteURL, siteType, siteTag, siteSafety, metadataURI);
     }
 
-    function delegateReviewCreation(
-        string memory category,
-        string memory domainAddress, 
-        string memory siteURL, 
-        string memory siteType, 
-        string memory siteTag, 
-        string memory siteSafety, 
-        string memory metadataURI,
-        address voter
-    ) public onlyRole(NETSEPIO_MODERATOR_ROLE) {
+    function delegateReviewCreation(string memory category, string memory domainAddress, string memory siteURL, string memory siteType, string memory siteTag, string memory siteSafety, string memory metadataURI, address voter) public onlyRole(NETSEPIO_MODERATOR_ROLE) {
+        require(hasRole(NETSEPIO_MODERATOR_ROLE, _msgSender()), "NetSepio: must have moderator role to submit review");
 
         uint256 tokenId = _tokenIdTracker.current();
         _safeMint(voter, tokenId);
@@ -136,6 +127,7 @@ contract NetSepio is
             infoHash: ""
         });
         Reviews[tokenId] = review;
+        _tokenURI[tokenId] = metadataURI;
         _tokenIdTracker.increment();
 
         emit ReviewCreated(voter, tokenId, category, domainAddress, siteURL, siteType, siteTag, siteSafety, metadataURI);
@@ -154,6 +146,14 @@ contract NetSepio is
         // destroy (burn) the token.
         _burn(tokenId);
         emit ReviewDeleted(_msgSender(), tokenId);
+    }
+
+    /**
+     * @dev See {IERC721Metadata-tokenURI}.
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        require(_exists(tokenId), "NetSepio: tokenURI query for nonexistent token");
+        return _tokenURI[tokenId];
     }
 
     /**
@@ -178,7 +178,7 @@ contract NetSepio is
     * Emits a `ReviewUpdate` event.
     */
     function updateReview(uint256 tokenId, string memory newInfoHash) public {
-        require(hasRole(NETSEPIO_MODERATOR_ROLE, _msgSender()) || _isApprovedOrOwner(_msgSender(), tokenId), "NetSepio: Sorry, caller do not have the authority");
+        require(hasRole(NETSEPIO_MODERATOR_ROLE, _msgSender()) || _isApprovedOrOwner(_msgSender(), tokenId), "NetSepio: caller do not have the authority");
 
         emit ReviewUpdated(_msgSender(), tokenId, Reviews[tokenId].infoHash, newInfoHash);
         Reviews[tokenId].infoHash = newInfoHash;
