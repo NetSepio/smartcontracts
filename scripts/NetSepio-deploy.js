@@ -4,6 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 const hre = require("hardhat");
+const args = require("../NetSepioArguments");
 
 async function main() {
 	// Hardhat always runs the compile task when running scripts with its command
@@ -15,7 +16,7 @@ async function main() {
 
 	// We get the contract to deploy
 	const netSepio = await hre.ethers.getContractFactory("NetSepio");
-	const c = await netSepio.deploy();
+	const c = await netSepio.deploy(args[0], args[1]);
 	await c.deployed();
 	console.log("NetSepio deployed to:", c.address);
 }

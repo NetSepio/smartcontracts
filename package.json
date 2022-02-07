@@ -12,5 +12,10 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.4",
     "hardhat": "^2.6.0"
+  },
+  "scripts": {
+    "deploy:maticmum": "hardhat run scripts/NetSepio-deploy.js --network maticmum",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "verify:maticmum": "hardhat verify --network maticmum $ADDRESS"
   }
 }

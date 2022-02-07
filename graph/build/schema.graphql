@@ -9,4 +9,5 @@ type Review @entity {
   metaDataUri: String!
   reviewBy: Bytes!
   deleted: Boolean!
+  infoHash: String! 
 }

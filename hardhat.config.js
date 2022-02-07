@@ -10,7 +10,7 @@ require('dotenv').config()
  * @param {string} key 
  * //Function to get value from env
  */
- function getEnv(key) {
+function getEnv(key) {
   return [key];
 }
 
@@ -28,7 +28,7 @@ task("accounts", "Prints the list of accounts", async () => {
 const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || "https://eth-rinkeby.alchemyapi.io/v2/your-api-key"
 const MATICMUM_RPC_URL = process.env.MATICMUM_RPC_URL || "https://rpc-mumbai.maticvigil.com"
 const MNEMONIC = process.env.MNEMONIC || "mnemonic"
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "Etherscan API key"
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || process.env.POLYGONSCAN_API_KEY || "Etherscan API key"
 // optional
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "wallet private key"
 
@@ -53,7 +53,7 @@ module.exports = {
       url: RINKEBY_RPC_URL,
       accounts: {
         mnemonic: MNEMONIC,
-    },
+      },
     },
     maticmum: {
       url: MATICMUM_RPC_URL,
