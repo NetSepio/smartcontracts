@@ -23,7 +23,7 @@ export class Review extends Entity {
     this.set("siteTag", Value.fromString(""));
     this.set("siteSafety", Value.fromString(""));
     this.set("metaDataUri", Value.fromString(""));
-    this.set("reviewBy", Value.fromBytes(Bytes.empty()));
+    this.set("reviewBy", Value.fromString(""));
     this.set("deleted", Value.fromBoolean(false));
     this.set("infoHash", Value.fromString(""));
   }
@@ -117,13 +117,13 @@ export class Review extends Entity {
     this.set("metaDataUri", Value.fromString(value));
   }
 
-  get reviewBy(): Bytes {
+  get reviewBy(): string {
     let value = this.get("reviewBy");
-    return value!.toBytes();
+    return value!.toString();
   }
 
-  set reviewBy(value: Bytes) {
-    this.set("reviewBy", Value.fromBytes(value));
+  set reviewBy(value: string) {
+    this.set("reviewBy", Value.fromString(value));
   }
 
   get deleted(): boolean {
@@ -142,5 +142,58 @@ export class Review extends Entity {
 
   set infoHash(value: string) {
     this.set("infoHash", Value.fromString(value));
+  }
+}
+
+export class User extends Entity {
+  constructor(id: string) {
+    super();
+    this.set("id", Value.fromString(id));
+
+    this.set("roles", Value.fromStringArray(new Array(0)));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save User entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.STRING,
+        "Cannot save User entity with non-string ID. " +
+          'Considering using .toHex() to convert the "id" to a string.'
+      );
+      store.set("User", id.toString(), this);
+    }
+  }
+
+  static load(id: string): User | null {
+    return changetype<User | null>(store.get("User", id));
+  }
+
+  get id(): string {
+    let value = this.get("id");
+    return value!.toString();
+  }
+
+  set id(value: string) {
+    this.set("id", Value.fromString(value));
+  }
+
+  get reviews(): Array<string> {
+    let value = this.get("reviews");
+    return value!.toStringArray();
+  }
+
+  set reviews(value: Array<string>) {
+    this.set("reviews", Value.fromStringArray(value));
+  }
+
+  get roles(): Array<string> {
+    let value = this.get("roles");
+    return value!.toStringArray();
+  }
+
+  set roles(value: Array<string>) {
+    this.set("roles", Value.fromStringArray(value));
   }
 }

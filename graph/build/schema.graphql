@@ -7,7 +7,13 @@ type Review @entity {
   siteTag: String!
   siteSafety: String!
   metaDataUri: String!
-  reviewBy: Bytes!
+  reviewBy: User!
   deleted: Boolean!
-  infoHash: String! 
+  infoHash: String!
+}
+
+type User @entity {
+  id: ID!
+  reviews: [Review!]! @derivedFrom(field: "reviewBy")
+  roles: [String!]!
 }
