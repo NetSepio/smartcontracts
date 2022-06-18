@@ -2,11 +2,11 @@
 Smart Contract for the NetSepio Voting and NFT Minting Operations
 
 Polygon testnet mumbai:
-https://mumbai.polygonscan.com/address/0x8869088f4B2B415b8D0C5f3882BE03a214EFF4B0#code
+https://mumbai.polygonscan.com/address/0x0DE62eb01aaAD01B5B3E29C9Bbb9ab6Cb2493114#code
 
-updated contract address: 0x8869088f4B2B415b8D0C5f3882BE03a214EFF4B0
+updated contract address: 0x0DE62eb01aaAD01B5B3E29C9Bbb9ab6Cb2493114
 
-default moderator: 0x2dA0a615981C2c9c70E34b8f50Db5f5a905E7928 
+default moderator: 0xdABD846A33c88eace4E4499a4d910c563E6B3134 
 
 
 
