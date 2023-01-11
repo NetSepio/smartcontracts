@@ -37,7 +37,7 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY || "wallet private key"
  */
 module.exports = {
   solidity: {
-    version: "0.8.9",
+    version: "0.8.15",
     settings: {
       optimizer: {
         enabled: true,
@@ -53,7 +53,7 @@ module.exports = {
       url: RINKEBY_RPC_URL,
       accounts: {
         mnemonic: MNEMONIC,
-    },
+      },
     },
     maticmum: {
       url: MATICMUM_RPC_URL,
