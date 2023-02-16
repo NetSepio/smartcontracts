@@ -317,7 +317,7 @@
   },
   {
     "inputs": [],
-    "name": "NETSEPIO_VOTER_ROLE",
+    "name": "NETSEPIO_REVIEWER_ROLE",
     "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
     "stateMutability": "view",
     "type": "function"
@@ -380,7 +380,7 @@
       { "internalType": "string", "name": "siteTag", "type": "string" },
       { "internalType": "string", "name": "siteSafety", "type": "string" },
       { "internalType": "string", "name": "metadataURI", "type": "string" },
-      { "internalType": "address", "name": "voter", "type": "address" }
+      { "internalType": "address", "name": "reviewer", "type": "address" }
     ],
     "name": "delegateReviewCreation",
     "outputs": [],

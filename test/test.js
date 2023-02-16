@@ -7,7 +7,7 @@ let accounts;
 let netSepio;
 let admin;
 let moderator;
-let voter;
+let reviewer;
 let stranger;
 
 const INTERFACES = {
@@ -50,7 +50,7 @@ const INTERFACES = {
 
 const NETSEPIO_ADMIN_ROLE = ethers.utils.keccak256(Buffer.from('NETSEPIO_ADMIN_ROLE'));
 const NETSEPIO_MODERATOR_ROLE = ethers.utils.keccak256(Buffer.from('NETSEPIO_MODERATOR_ROLE'));
-const NETSEPIO_VOTER_ROLE = ethers.utils.keccak256(Buffer.from('NETSEPIO_VOTER_ROLE'));
+const NETSEPIO_REVIEWER_ROLE = ethers.utils.keccak256(Buffer.from('NETSEPIO_REVIEWER_ROLE'));
 
 describe("NetSepio Contract", function () {
 
@@ -58,7 +58,7 @@ describe("NetSepio Contract", function () {
 		accounts = await ethers.getSigners();
 		admin = accounts[0];
 		moderator = accounts[1];
-		voter = accounts[2];
+		reviewer = accounts[2];
 		stranger = accounts[3];
 		netSepio = await NetSepio.new("NetSepio", "NETSEC");
 	});
@@ -80,16 +80,16 @@ describe("NetSepio Contract", function () {
 	});
 
 	describe("Roles Provisioning", function () {
-		it('Should provision/verify admin, moderator and voter roles', async function () {
-			const [admin, moderator, voter] = await hre.ethers.getSigners();
+		it('Should provision/verify admin, moderator and reviewer roles', async function () {
+			const [admin, moderator, reviewer] = await hre.ethers.getSigners();
 		
 			expect(await netSepio.getRoleAdmin(NETSEPIO_ADMIN_ROLE)).to.equal(NETSEPIO_ADMIN_ROLE);
 			expect(await netSepio.getRoleAdmin(NETSEPIO_MODERATOR_ROLE)).to.equal(NETSEPIO_ADMIN_ROLE);
-			expect(await netSepio.getRoleAdmin(NETSEPIO_VOTER_ROLE)).to.equal(NETSEPIO_MODERATOR_ROLE);
+			expect(await netSepio.getRoleAdmin(NETSEPIO_REVIEWER_ROLE)).to.equal(NETSEPIO_MODERATOR_ROLE);
 			
 			expect(await netSepio.hasRole(NETSEPIO_ADMIN_ROLE, admin.address)).to.equal(true);
 			expect(await netSepio.hasRole(NETSEPIO_MODERATOR_ROLE, moderator.address)).to.equal(false);
-			expect(await netSepio.hasRole(NETSEPIO_VOTER_ROLE, voter.address)).to.equal(false);
+			expect(await netSepio.hasRole(NETSEPIO_REVIEWER_ROLE, reviewer.address)).to.equal(false);
 		
 			let txReceipt = await netSepio.grantRole(NETSEPIO_MODERATOR_ROLE, moderator.address);
 			expect(txReceipt.receipt.status).to.equal(true);

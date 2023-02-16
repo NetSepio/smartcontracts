@@ -343,7 +343,7 @@
   },
   {
     "inputs": [],
-    "name": "NETSEPIO_VOTER_ROLE",
+    "name": "NETSEPIO_REVIEWER_ROLE",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -522,7 +522,7 @@
       },
       {
         "internalType": "address",
-        "name": "voter",
+        "name": "reviewer",
         "type": "address"
       }
     ],

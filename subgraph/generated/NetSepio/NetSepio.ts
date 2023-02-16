@@ -446,20 +446,20 @@ export class NetSepio extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(value[0].toBytes());
   }
 
-  NETSEPIO_VOTER_ROLE(): Bytes {
+  NETSEPIO_REVIEWER_ROLE(): Bytes {
     let result = super.call(
-      "NETSEPIO_VOTER_ROLE",
-      "NETSEPIO_VOTER_ROLE():(bytes32)",
+      "NETSEPIO_REVIEWER_ROLE",
+      "NETSEPIO_REVIEWER_ROLE():(bytes32)",
       []
     );
 
     return result[0].toBytes();
   }
 
-  try_NETSEPIO_VOTER_ROLE(): ethereum.CallResult<Bytes> {
+  try_NETSEPIO_REVIEWER_ROLE(): ethereum.CallResult<Bytes> {
     let result = super.tryCall(
-      "NETSEPIO_VOTER_ROLE",
-      "NETSEPIO_VOTER_ROLE():(bytes32)",
+      "NETSEPIO_REVIEWER_ROLE",
+      "NETSEPIO_REVIEWER_ROLE():(bytes32)",
       []
     );
     if (result.reverted) {
@@ -1033,7 +1033,7 @@ export class DelegateReviewCreationCall__Inputs {
     return this._call.inputValues[6].value.toString();
   }
 
-  get voter(): Address {
+  get reviewer(): Address {
     return this._call.inputValues[7].value.toAddress();
   }
 }
