@@ -124,3 +124,7 @@ artifacts
 
 # Environment Variables
 .env 
+
+#coverage files
+coverage
+coverage.json

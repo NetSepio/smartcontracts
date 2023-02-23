@@ -1,16 +1,17 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-etherscan");
+require("solidity-coverage");
 
-const fs = require('fs');
-require('dotenv').config()
+const fs = require("fs");
+require("dotenv").config();
 
 /**
- * 
- * @param {string} key 
+ *
+ * @param {string} key
  * //Function to get value from env
  */
- function getEnv(key) {
+function getEnv(key) {
   return [key];
 }
 
@@ -25,12 +26,15 @@ task("accounts", "Prints the list of accounts", async () => {
 });
 
 // API_KEY & PRIVATE_KEY
-const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || "https://eth-rinkeby.alchemyapi.io/v2/your-api-key"
-const MATICMUM_RPC_URL = process.env.MATICMUM_RPC_URL || "https://rpc-mumbai.maticvigil.com"
-const MNEMONIC = process.env.MNEMONIC || "mnemonic"
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "Etherscan API key"
+const RINKEBY_RPC_URL =
+  process.env.RINKEBY_RPC_URL ||
+  "https://eth-rinkeby.alchemyapi.io/v2/your-api-key";
+const MATICMUM_RPC_URL =
+  process.env.MATICMUM_RPC_URL || "https://rpc-mumbai.maticvigil.com";
+const MNEMONIC = process.env.MNEMONIC || "mnemonic";
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "Etherscan API key";
 // optional
-const PRIVATE_KEY = process.env.PRIVATE_KEY || "wallet private key"
+const PRIVATE_KEY = process.env.PRIVATE_KEY || "wallet private key";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -41,14 +45,13 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+      },
+    },
   },
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {
-    },
+    hardhat: {},
     rinkeby: {
       url: RINKEBY_RPC_URL,
       accounts: {
@@ -61,18 +64,18 @@ module.exports = {
       accounts: {
         mnemonic: MNEMONIC,
       },
-    }
+    },
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY
+    apiKey: ETHERSCAN_API_KEY,
   },
   paths: {
     sources: "./contracts",
     tests: "./test",
     cache: "./cache",
-    artifacts: "./artifacts"
+    artifacts: "./artifacts",
   },
   mocha: {
-    timeout: 20000
-  }
+    timeout: 20000,
+  },
 };
