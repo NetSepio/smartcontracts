@@ -14,8 +14,8 @@ async function main() {
 	// await hre.run('compile');
 
 	// We get the contract to deploy
-	const netSepio = await hre.ethers.getContractFactory("NetSepio");
-	await netSepio.deployed();
+	const NetSepio = await hre.ethers.getContractFactory("NetSepio");
+	const netSepio = await NetSepio.deploy("NetSepio", "NETSEC");
 	console.log("NetSepio deployed to:", netSepio.address);
 }
 

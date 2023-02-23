@@ -1,0 +1,55 @@
+specVersion: 0.0.5
+schema:
+  file: schema.graphql
+dataSources:
+  - kind: ethereum
+    name: NetSepio
+    network: mumbai
+    source:
+      address: "0x67d3104dDDd78A8f04fB445f689Fccf4916a2D20"
+      abi: NetSepio
+      startBlock: 32095904
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Approval
+        - ApprovalForAll
+        - Paused
+        - ReviewCreated
+        - ReviewDeleted
+        - ReviewUpdated
+        - RoleAdminChanged
+        - RoleGranted
+        - RoleRevoked
+        - Transfer
+        - Unpaused
+      abis:
+        - name: NetSepio
+          file: NetSepio/abis/NetSepio.json
+      eventHandlers:
+        - event: Approval(indexed address,indexed address,indexed uint256)
+          handler: handleApproval
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: Paused(address)
+          handler: handlePaused
+        - event: ReviewCreated(indexed address,indexed
+            uint256,string,string,string,string,string,string,string)
+          handler: handleReviewCreated
+        - event: ReviewDeleted(indexed address,indexed uint256)
+          handler: handleReviewDeleted
+        - event: ReviewUpdated(indexed address,indexed uint256,string,string)
+          handler: handleReviewUpdated
+        - event: RoleAdminChanged(indexed bytes32,indexed bytes32,indexed bytes32)
+          handler: handleRoleAdminChanged
+        - event: RoleGranted(indexed bytes32,indexed address,indexed address)
+          handler: handleRoleGranted
+        - event: RoleRevoked(indexed bytes32,indexed address,indexed address)
+          handler: handleRoleRevoked
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        - event: Unpaused(address)
+          handler: handleUnpaused
+      file: NetSepio/NetSepio.wasm

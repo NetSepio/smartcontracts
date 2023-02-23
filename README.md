@@ -1,14 +1,12 @@
+# Smart Contracts
+Smart Contracts for the NetSepio Voting and NFT Minting Operations
 
-# SmartContract
-Smart Contract for the NetSepio Voting and NFT Minting Operations
+Polygon Mumbai Testnet:
+https://mumbai.polygonscan.com/address/0x67d3104dDDd78A8f04fB445f689Fccf4916a2D20#code
 
-Polygon testnet mumbai:
-https://mumbai.polygonscan.com/address/0x8869088f4B2B415b8D0C5f3882BE03a214EFF4B0#code
+Contract Address: 0x67d3104dDDd78A8f04fB445f689Fccf4916a2D20
 
-updated contract address: 0x8869088f4B2B415b8D0C5f3882BE03a214EFF4B0
-
-default moderator: 0x2dA0a615981C2c9c70E34b8f50Db5f5a905E7928 
-
+Default Moderator: 0xd198DDcff05b398ce74C48E4d33C68212637EaAe 
 
 ---
 
@@ -17,7 +15,7 @@ You'll find here the NFT contracts, tests for that contract, a script that deplo
 ## Installation
 1. Clone the repo by using 
 ```shell
-git clone https://github.com/NetSepio/SmartContract.git
+git clone https://github.com/NetSepio/smartcontracts.git
 ```
 2. Install the dependencies by using the command `npm install`.
    This way your environment will be reproducible, and you will avoid future version conflicts.
@@ -73,30 +71,14 @@ where `NetSepioArguments.js` is a javascript module that exports the argument li
 
 Finally, visit the contract address on the Blockchain Explorer (PolygonScan) and interact with the smart contract at section `Read Contract` and `Write Contract`
 
-# The graph setting(mumbai):
+---
 
-Build completed: QmZ5R3gSFC8MjkGZ2krBq8w3QZzzR76fbzLvbUwhN2wg3J
+# TheGraph - Mumbai Network:
 
-Deployed to https://thegraph.com/studio/subgraph/net
+Build completed: Qmce86RoExVBv9X9AnHdJtudRZaFrmDjHRybqfjTXJoVmY
 
-Subgraph endpoints:
-
-Queries (HTTP):     https://api.studio.thegraph.com/query/5758/net/v0.0.1
-
-Subscriptions (WS): https://api.studio.thegraph.com/query/5758/net/v0.0.1
-
-
-
-# The graph setting(rinkeby):
-
-Build completed: QmUaBWDjKafMzvHS7TkEFPQYkA22XBn5JWjj1cKJRjj87K
-
-Deployed to https://thegraph.com/studio/subgraph/net1
+Deployed to https://thegraph.com/explorer/subgraph/netsepio/netsepio-mumbai
 
 Subgraph endpoints:
 
-Queries (HTTP):     https://api.studio.thegraph.com/query/5758/net1/v0.0.1
-
-Subscriptions (WS): https://api.studio.thegraph.com/query/5758/net1/v0.0.1
-
-https://testnet.thegraph.com/subgraph?id=0x6a453a70f6fac3abef56e1cb6741b06a25b9e9fb-0&view=Overview
+Queries (HTTP):     https://api.thegraph.com/subgraphs/name/netsepio/netsepio-mumbai
