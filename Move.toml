@@ -1,0 +1,9 @@
+[package]
+name = "daptorator"
+version = "1.0.0"
+
+[addresses]
+admin = "f1601b7633aab8152d1b21702b08bb9c5417ffe84f45eaaeb28d11249c46db8d"
+
+[dependencies]
+AptosTokenObjects = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-token-objects/", rev = "aptos-cli-v2.0.2" }
