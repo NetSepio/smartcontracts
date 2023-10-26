@@ -1,0 +1,9 @@
+[package]
+name = "netsepio"
+version = "1.0.0"
+
+[addresses]
+admin = "1da41025906f10f17f74f6c6851cb3d192acdd31131123f67e800aa5358b5bc1"
+
+[dependencies]
+AptosTokenObjects = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-token-objects/", rev = "aptos-cli-v2.0.2" }
