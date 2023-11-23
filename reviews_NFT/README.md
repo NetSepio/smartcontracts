@@ -1,7 +1,7 @@
-# Smart Contracts
-Smart Contracts for the NetSepio Reviews for Aptos Blockchain
+# Reviews_NFT
+Smart Contract for the NetSepio Reviews for Aptos Blockchain
 
-Deployed to testnet under contract address: 1da41025906f10f17f74f6c6851cb3d192acdd31131123f67e800aa5358b5bc1
+Deployed to testnet under contract address: 08256c1924e4234c5e5391149a1691bc03eaefeaf059e26a51f8679d4bc109cb
 
 Entry Functions:
 - grant_role
@@ -13,6 +13,7 @@ Entry Functions:
 
 View Functions:
 - check_if_metadata_exists
+- check_role
 - total_dapps_reviewed
 - total_reviews
 

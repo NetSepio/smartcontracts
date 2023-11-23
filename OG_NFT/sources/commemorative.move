@@ -171,6 +171,12 @@ module admin::commemorative{
             });
     }
 
+    #[view]
+    public fun total_minted_NFTs(): u64 acquires State {
+        let state = borrow_global<State>(@admin);
+        state.minted
+    }
+
     //==============================================================================================
     // Validation functions
     //==============================================================================================
