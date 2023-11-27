@@ -15,6 +15,7 @@ module admin::commemorative{
     use aptos_framework::timestamp;
     use aptos_framework::option;
     use std::string_utils;
+    use std::vector;
     //use std::debug;
 
     #[test_only]
@@ -26,6 +27,7 @@ module admin::commemorative{
 
     const ERROR_SIGNER_NOT_ADMIN: u64 = 0;
     const ERROR_SUPPLY_EXCEEDED: u64 = 1;
+    const ERROR_SIGNER_NOT_OPERATOR: u64 = 2;
     const ERROR_OTHERS: u64 = 4;
 
     //==============================================================================================
@@ -64,6 +66,8 @@ module admin::commemorative{
         signer_cap: SignerCapability,
         // NFT count
         minted: u64,
+        // minted_nft_obj_add
+        nft_list: vector<address>,
         // Events
         nft_minted_events: EventHandle<NftMintedEvent>
     }
@@ -76,6 +80,8 @@ module admin::commemorative{
         user: address,
         // nft #
         nft_no: u64,
+        // nft object address
+        obj_add: address,
         // timestamp
         timestamp: u64
     }
@@ -109,6 +115,7 @@ module admin::commemorative{
         let state = State{
             signer_cap: resource_cap,
             minted: 0,
+            nft_list: vector::empty(),
             nft_minted_events: account::new_event_handle<NftMintedEvent>(&resource_signer)
         };
         move_to<State>(admin, state);
@@ -120,8 +127,8 @@ module admin::commemorative{
     }
 
     public entry fun delegate_mint_NFT(operator: &signer, minter: address, nft_uri: String) acquires State{
-        let user_add = signer::address_of(minter);
-        mint_internal(user_add, nft_uri);
+        assert_operator(admin::reviews::check_role(signer::address_of(operator)));
+        mint_internal(minter, nft_uri);
     }
 
     //==============================================================================================
@@ -144,9 +151,10 @@ module admin::commemorative{
         );
 
         let obj_signer = object::generate_signer(&token_const_ref);
+        let obj_add = object::address_from_constructor_ref(&token_const_ref);
 
         // Transfer the token to the reviewer account
-        object::transfer_raw(&res_signer, object::address_from_constructor_ref(&token_const_ref), user);
+        object::transfer_raw(&res_signer, obj_add, user);
 
         // Create the ReviewToken object and move it to the new token object signer
         let new_nft_token = NftToken {
@@ -158,15 +166,15 @@ module admin::commemorative{
         move_to<NftToken>(&obj_signer, new_nft_token);
 
         state.minted = current_nft;
+        vector::push_back(&mut state.nft_list, obj_add);
 
         // Emit a new NftMintedEvent
         event::emit_event<NftMintedEvent>(
             &mut state.nft_minted_events,
             NftMintedEvent {
                 user,
-                // nft #
                 nft_no: current_nft,
-                // timestamp
+                obj_add,
                 timestamp: timestamp::now_seconds()
             });
     }
@@ -183,6 +191,10 @@ module admin::commemorative{
 
     inline fun assert_admin(admin: address) {
         assert!(admin == @admin, ERROR_SIGNER_NOT_ADMIN);
+    }
+
+    inline fun assert_operator(check_role_return: String) {
+        assert!(check_role_return == string::utf8(b"operator") , ERROR_SIGNER_NOT_OPERATOR);
     }
 
     inline fun assert_supply_not_exceeded(minted: u64) {
@@ -263,7 +275,7 @@ module admin::commemorative{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
-        mint_NFT(user, image_uri);
+        user_mint_NFT(user, image_uri);
 
         let state = borrow_global<State>(admin_address);
 
@@ -297,6 +309,10 @@ module admin::commemorative{
             option::is_none<royalty::Royalty>(&token::royalty(nft_token_object)),
             4
         );
+        assert!(
+            vector::contains(&state.nft_list, &expected_nft_token_address),
+            4
+        );
 
         assert!(event::counter(&state.nft_minted_events) == 1, 4);
 
@@ -326,6 +342,98 @@ module admin::commemorative{
         };
 
         user_mint_NFT(user, image_uri);
+    }
+
+    #[test(admin = @admin, user = @0xA, operator = @0xB)]
+    fun test_delegate_mint_success(
+        admin: &signer,
+        operator: &signer,
+        user: &signer
+    ) acquires State {
+        let admin_address = signer::address_of(admin);
+        let user_address = signer::address_of(user);
+        account::create_account_for_test(admin_address);
+        account::create_account_for_test(user_address);
+
+        let aptos_framework = account::create_account_for_test(@aptos_framework);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        admin::reviews::init_module_for_test(admin);
+        init_module(admin);
+
+        admin::reviews::grant_role(
+            admin,
+            signer::address_of(operator),
+            string::utf8(b"operator")
+        );
+
+        let image_uri = string::utf8(b"QmSYRXWGGqVDAHKTwfnYQDR74d4bfwXxudFosbGA695AWS");
+
+        let resource_account_address = account::create_resource_address(&@admin, SEED);
+
+        delegate_mint_NFT(operator, user_address, image_uri);
+
+        let state = borrow_global<State>(admin_address);
+
+        let expected_nft_token_address = token::create_token_address(
+            &resource_account_address,
+            &string::utf8(b"Beta test NFT"),
+            &string_utils::format2(&b"{}#{}", string::utf8(b"nft"), string_utils::to_string_with_integer_types(&state.minted))
+        );
+        let nft_token_object = object::address_to_object<token::Token>(expected_nft_token_address);
+        assert!(
+            object::is_owner(nft_token_object, user_address) == true,
+            1
+        );
+        assert!(
+            token::creator(nft_token_object) == resource_account_address,
+            4
+        );
+        assert!(
+            token::name(nft_token_object) == string_utils::format2(&b"{}#{}", string::utf8(b"nft"), string_utils::to_string_with_integer_types(&state.minted)),
+            4
+        );
+        assert!(
+            token::description(nft_token_object) == string::utf8(b"NFT token description"),
+            4
+        );
+        assert!(
+            token::uri(nft_token_object) == image_uri,
+            4
+        );
+        assert!(
+            option::is_none<royalty::Royalty>(&token::royalty(nft_token_object)),
+            4
+        );
+        assert!(
+            vector::contains(&state.nft_list, &expected_nft_token_address),
+            4
+        );
+
+        assert!(event::counter(&state.nft_minted_events) == 1, 4);
+    }
+
+    #[test(admin = @admin, user = @0xA, operator = @0xB)]
+    #[expected_failure(abort_code = ERROR_SIGNER_NOT_OPERATOR)]
+    fun test_delegate_mint_failure_not_operator(
+        admin: &signer,
+        operator: &signer,
+        user: &signer
+    ) acquires State {
+        let admin_address = signer::address_of(admin);
+        let user_address = signer::address_of(user);
+        account::create_account_for_test(admin_address);
+        account::create_account_for_test(user_address);
+
+        let aptos_framework = account::create_account_for_test(@aptos_framework);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        admin::reviews::init_module_for_test(admin);
+        init_module(admin);
+
+        let image_uri = string::utf8(b"QmSYRXWGGqVDAHKTwfnYQDR74d4bfwXxudFosbGA695AWS");
+
+        delegate_mint_NFT(operator, user_address, image_uri);
     }
 
 }

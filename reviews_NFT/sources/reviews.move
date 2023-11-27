@@ -1,4 +1,4 @@
-module admin::netsepio{
+module admin::reviews{
 
     //==============================================================================================
     // Dependencies
@@ -413,7 +413,7 @@ module admin::netsepio{
     }
 
     #[view]
-    public fun total_dapps_reviewed(): u64 acquires State {
+    public fun total_sites_reviewed(): u64 acquires State {
         let state = borrow_global<State>(@admin);
         simple_map::length(&state.websites)
     }

@@ -1,5 +1,5 @@
 [package]
-name = "netsepio"
+name = "reviews"
 version = "1.0.0"
 
 [addresses]
