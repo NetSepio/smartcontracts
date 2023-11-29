@@ -1,5 +1,4 @@
 # Smart Contracts
-Smart Contracts for the NetSepio on Aptos Blockchain
 
 ## **1. reviews_NFT**
 Smart contract for submit & delete reviews, grant operator/reviewer roles, view functions, etc.
