@@ -32,6 +32,11 @@ module admin::reviews{
     const ERROR_SIGNER_NOT_OPERATOR: u64 = 2;
     const ERROR_METADATA_DUPLICATED: u64 = 3;
     const ERROR_OTHERS: u64 = 4;
+    const ERROR_REVIEW_DOES_NOT_EXIST: u64 = 5;
+    const ERROR_USER_NO_ROLE: u64 = 6;
+    const ERROR_USER_ALREADY_HAS_ROLE: u64 = 7;
+    const ERROR_INVALID_ROLE_NAME: u64 = 8;
+    const ERROR_WRONG_ROLE: u64 = 9;
 
     //==============================================================================================
     // Constants
@@ -41,12 +46,12 @@ module admin::reviews{
     const SEED: vector<u8> = b"daptorator";
 
     // Token collection information
-    const COLLECTION_NAME: vector<u8> = b"Review collection name";
-    const COLLECTION_DESCRIPTION: vector<u8> = b"Review collection description";
+    const COLLECTION_NAME: vector<u8> = b"Review collection";
+    const COLLECTION_DESCRIPTION: vector<u8> = b"Beta testnet";
     const COLLECTION_URI: vector<u8> = b"Review collection uri";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"Review token description";
+    const TOKEN_DESCRIPTION: vector<u8> = b"Beta test reviews";
 
 
     //==============================================================================================
@@ -151,6 +156,8 @@ module admin::reviews{
     struct ReviewDeletedEvent has store, drop {
         // review_hash
         metadata: String,
+        // address of the account deleting the review
+        deleter: address,
         // address of the account owning the review
         reviewer: address,
         // timestamp
@@ -321,15 +328,17 @@ module admin::reviews{
     }
 
     public entry fun delete_review(
-        operator: &signer,
+        deleter: &signer,
         metadata: String
     ) acquires State, ReviewToken {
         let review_hash = bcs::to_bytes(&metadata);
         let state = borrow_global_mut<State>(@admin);
-        assert_operator(signer::address_of(operator), state.roles);
+        assert_metadata_exists(review_hash, state.metadatas);
         let review_token_address = *simple_map::borrow(&state.metadatas, &review_hash);
         let review_token_object = object::address_to_object<ReviewToken>(review_token_address);
         let reviewer = object::owner(review_token_object);
+        let deleter_address = signer::address_of(deleter);
+        assert_owner_or_operator(deleter_address, state.roles, reviewer);
         let review_token = move_from<ReviewToken>(review_token_address);
         let ReviewToken{mutator_ref: _, burn_ref} = review_token;
 
@@ -342,6 +351,7 @@ module admin::reviews{
             &mut state.review_deleted_events,
             ReviewDeletedEvent {
                 metadata,
+                deleter: deleter_address,
                 reviewer,
                 timestamp: timestamp::now_seconds()
             });
@@ -431,8 +441,8 @@ module admin::reviews{
     ) acquires State {
         {
             let review_hash = bcs::to_bytes(&metadata);
-            assert_metadata_not_duplicated(review_hash);
             let state = borrow_global_mut<State>(@admin);
+            assert_metadata_not_duplicated(review_hash, state.metadatas);
             let res_signer = account::create_signer_with_capability(&state.signer_cap);
             // Create a new named token:
             let token_const_ref = token::create_named_token(
@@ -487,9 +497,13 @@ module admin::reviews{
         assert!(admin == @admin, ERROR_SIGNER_NOT_ADMIN);
     }
 
-    inline fun assert_metadata_not_duplicated(review_hash: vector<u8>) {
-        let state = borrow_global<State>(@admin);
-        assert!(!simple_map::contains_key(&state.metadatas, &review_hash), ERROR_METADATA_DUPLICATED);
+    inline fun assert_metadata_not_duplicated(review_hash: vector<u8>, metadatas: SimpleMap<vector<u8>, address>) {
+        assert!(!simple_map::contains_key(&metadatas, &review_hash), ERROR_METADATA_DUPLICATED);
+    }
+
+    inline fun assert_metadata_exists(review_hash: vector<u8>, metadatas: SimpleMap<vector<u8>, address>) {
+
+        assert!(simple_map::contains_key(&metadatas, &review_hash), ERROR_REVIEW_DOES_NOT_EXIST);
     }
 
     inline fun assert_reviewer(user: address, roles: Roles) {
@@ -501,19 +515,23 @@ module admin::reviews{
     }
 
     inline fun assert_appropriate_role(role: String) {
-        assert!(role == string::utf8(b"operator") || role == string::utf8(b"reviewer") , ERROR_OTHERS);
+        assert!(role == string::utf8(b"operator") || role == string::utf8(b"reviewer") , ERROR_INVALID_ROLE_NAME);
     }
 
     inline fun assert_user_has_role(user: address, roles: Roles) {
-        assert!(vector::contains(&roles.reviewer, &user) || vector::contains(&roles.operator, &user) , ERROR_OTHERS);
+        assert!(vector::contains(&roles.reviewer, &user) || vector::contains(&roles.operator, &user) , ERROR_USER_NO_ROLE);
     }
 
     inline fun assert_user_does_not_have_role(user: address, roles: Roles) {
-        assert!(!vector::contains(&roles.reviewer, &user) && !vector::contains(&roles.operator, &user) , ERROR_OTHERS);
+        assert!(!vector::contains(&roles.reviewer, &user) && !vector::contains(&roles.operator, &user) , ERROR_USER_ALREADY_HAS_ROLE);
     }
 
     inline fun assert_admin_or_operator(user: address, roles: Roles) {
         assert!(vector::contains(&roles.operator, &user) || user == @admin, ERROR_SIGNER_NOT_OPERATOR);
+    }
+
+    inline fun assert_owner_or_operator(user: address, roles: Roles, owner: address) {
+        assert!(vector::contains(&roles.operator, &user) || user == owner, ERROR_WRONG_ROLE);
     }
 
     //==============================================================================================
@@ -557,7 +575,7 @@ module admin::reviews{
 
         let expected_collection_address = collection::create_collection_address(
             &expected_resource_account_address,
-            &string::utf8(b"Review collection name")
+            &string::utf8(b"Review collection")
         );
         let collection_object = object::address_to_object<collection::Collection>(expected_collection_address);
         assert!(
@@ -565,11 +583,11 @@ module admin::reviews{
             4
         );
         assert!(
-            collection::name<collection::Collection>(collection_object) == string::utf8(b"Review collection name"),
+            collection::name<collection::Collection>(collection_object) == string::utf8(b"Review collection"),
             4
         );
         assert!(
-            collection::description<collection::Collection>(collection_object) == string::utf8(b"Review collection description"),
+            collection::description<collection::Collection>(collection_object) == string::utf8(b"Beta testnet"),
             4
         );
         assert!(
@@ -628,7 +646,7 @@ module admin::reviews{
 
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
+            &string::utf8(b"Review collection"),
             &metadata
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
@@ -645,7 +663,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Review token description"),
+            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
             4
         );
         assert!(
@@ -814,7 +832,7 @@ module admin::reviews{
 
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
+            &string::utf8(b"Review collection"),
             &metadata
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
@@ -831,7 +849,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Review token description"),
+            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
             4
         );
         assert!(
@@ -944,7 +962,7 @@ module admin::reviews{
 
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
+            &string::utf8(b"Review collection"),
             &metadata
         );
 
@@ -969,8 +987,8 @@ module admin::reviews{
     }
 
     #[test(admin = @admin, reviewer = @0xA, operator = @0xB)]
-    #[expected_failure(abort_code = ERROR_SIGNER_NOT_OPERATOR)]
-    fun test_delete_review_failure_not_operator(
+    #[expected_failure(abort_code = ERROR_WRONG_ROLE)]
+    fun test_delete_review_failure_not_operator_nor_owner(
         admin: &signer,
         operator: &signer,
         reviewer: &signer
@@ -1054,7 +1072,7 @@ module admin::reviews{
     }
 
     #[test(admin = @admin, reviewer = @0xA)]
-    #[expected_failure(abort_code = ERROR_OTHERS)]
+    #[expected_failure(abort_code = ERROR_INVALID_ROLE_NAME)]
     fun test_grant_role_failure_wrong_role(
         admin: &signer,
         reviewer: &signer
@@ -1140,7 +1158,7 @@ module admin::reviews{
     }
 
     #[test(admin = @admin, user = @0xB)]
-    #[expected_failure(abort_code = ERROR_OTHERS)]
+    #[expected_failure(abort_code = ERROR_USER_NO_ROLE)]
     fun test_remove_role_failure_user_has_no_role(
         admin: &signer,
         user: &signer
@@ -1207,7 +1225,7 @@ module admin::reviews{
 
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
+            &string::utf8(b"Review collection"),
             &metadata
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
@@ -1224,7 +1242,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Review token description"),
+            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
             4
         );
         assert!(
