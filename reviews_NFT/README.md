@@ -1,7 +1,7 @@
 # Reviews_NFT
 Smart Contract for the NetSepio Reviews for Aptos Blockchain
 
-_Currently deployed on:_ 
+_Currently deployed on testnet:_ 0x5fdf39c03b36e9c59387628ca9066c62b2ec41019355c249177a7886e663f4a1
 
 Entry Functions:
 - grant_role
@@ -31,6 +31,6 @@ Events:
 - added "init_module_for_test" for test interaction with other contracts
 
 ### 1.0.3:
-- Deployed to testnet under contract address: 
+- Deployed to testnet under contract address: 0x5fdf39c03b36e9c59387628ca9066c62b2ec41019355c249177a7886e663f4a1
 - delete_review -> access changed to user and operator instead of operator only
 - revised error codes
