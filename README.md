@@ -1,6 +1,6 @@
 # Smart Contracts
 
-Deployed to testnet: 0x5fdf39c03b36e9c59387628ca9066c62b2ec41019355c249177a7886e663f4a1
+Deployed to testnet: f315eefb17f4ec43cc9fab9123bf96883162984bfb9f716b81491e789199549e
 
 ## **1. reviews_NFT**
 Smart contract for submit & delete reviews, grant operator/reviewer roles, view functions, etc.

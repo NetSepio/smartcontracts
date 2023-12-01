@@ -1,7 +1,7 @@
 # OG_NFT
 Smart Contract for the commemorative NFT for first 500 beta testers
 
-Deployed to testnet under contract address: 0x5fdf39c03b36e9c59387628ca9066c62b2ec41019355c249177a7886e663f4a1
+Deployed to testnet under contract address: f315eefb17f4ec43cc9fab9123bf96883162984bfb9f716b81491e789199549e
 
 Entry Functions:
 - user_mint_NFT

@@ -19,6 +19,7 @@ module admin::reviews{
     use aptos_std::simple_map::SimpleMap;
     use std::bcs;
     use std::vector;
+    use aptos_std::string_utils;
 
     #[test_only]
     use aptos_token_objects::royalty;
@@ -48,7 +49,7 @@ module admin::reviews{
     // Token collection information
     const COLLECTION_NAME: vector<u8> = b"Review collection";
     const COLLECTION_DESCRIPTION: vector<u8> = b"Beta testnet";
-    const COLLECTION_URI: vector<u8> = b"Review collection uri";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/";
 
     // Token information
     const TOKEN_DESCRIPTION: vector<u8> = b"Beta test reviews";
@@ -85,6 +86,8 @@ module admin::reviews{
     struct State has key {
         // signer cap of the module's resource account
         signer_cap: SignerCapability,
+        // reviews minted
+        count: u128,
         // SimpleMap<Metadata, review_token_address>
         metadatas: SimpleMap<vector<u8>, address>,
         // SimpleMap<siteURL, site_token_address>
@@ -196,6 +199,7 @@ module admin::reviews{
         // Create the State global resource and move it to the admin account
         let state = State{
             signer_cap: resource_cap,
+            count: 0,
             metadatas: simple_map::new(),
             websites: simple_map::new(),
             roles,
@@ -444,14 +448,16 @@ module admin::reviews{
             let state = borrow_global_mut<State>(@admin);
             assert_metadata_not_duplicated(review_hash, state.metadatas);
             let res_signer = account::create_signer_with_capability(&state.signer_cap);
+            let count = state.count +1;
+            let name = string_utils::format1(&b"Review #{}", count);
             // Create a new named token:
             let token_const_ref = token::create_named_token(
                 &res_signer,
                 string::utf8(COLLECTION_NAME),
                 string::utf8(TOKEN_DESCRIPTION),
-                metadata,
+                name,
                 option::none(),
-                metadata
+                string::utf8(COLLECTION_URI)
             );
 
             let obj_signer = object::generate_signer(&token_const_ref);
@@ -591,10 +597,10 @@ module admin::reviews{
             4
         );
         assert!(
-            collection::uri<collection::Collection>(collection_object) == string::utf8(b"Review collection uri"),
+            collection::uri<collection::Collection>(collection_object) == string::utf8(b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/"),
             4
         );
-
+        assert!(state.count == 0, 4);
         assert!(event::counter(&state.review_submitted_events) == 0, 4);
         assert!(event::counter(&state.review_deleted_events) == 0, 4);
     }
@@ -644,10 +650,11 @@ module admin::reviews{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
             &string::utf8(b"Review collection"),
-            &metadata
+            &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
         assert!(
@@ -659,7 +666,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::name(review_token_object) == metadata,
+            token::name(review_token_object) == expected_name,
             4
         );
         assert!(
@@ -667,7 +674,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::uri(review_token_object) == metadata,
+            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(
@@ -830,10 +837,11 @@ module admin::reviews{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
             &string::utf8(b"Review collection"),
-            &metadata
+            &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
         assert!(
@@ -845,7 +853,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::name(review_token_object) == metadata,
+            token::name(review_token_object) == expected_name,
             4
         );
         assert!(
@@ -853,7 +861,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::uri(review_token_object) == metadata,
+            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(
@@ -960,10 +968,11 @@ module admin::reviews{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
             &string::utf8(b"Review collection"),
-            &metadata
+            &expected_name
         );
 
         grant_role(
@@ -1223,10 +1232,11 @@ module admin::reviews{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
             &string::utf8(b"Review collection"),
-            &metadata
+            &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
         assert!(
@@ -1238,7 +1248,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::name(review_token_object) == metadata,
+            token::name(review_token_object) == expected_name,
             4
         );
         assert!(
@@ -1246,7 +1256,7 @@ module admin::reviews{
             4
         );
         assert!(
-            token::uri(review_token_object) == metadata,
+            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(
