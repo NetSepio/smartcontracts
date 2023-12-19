@@ -477,6 +477,7 @@ module admin::reviews{
             //block transfer between normal users
             object::disable_ungated_transfer(&object::generate_transfer_ref(&token_const_ref));
 
+            state.count = count;
             // Emit a new ReviewSubmittedEvent
             event::emit_event<ReviewSubmittedEvent>(
                 &mut state.review_submitted_events,
