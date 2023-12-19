@@ -7,3 +7,6 @@ Smart contract for submit & delete reviews, grant operator/reviewer roles, view 
 
 ## **2. OG_NFT**
 Smart contract for commemorative NFT for first 500 beta testers
+
+## **2. DAO_NFT**
+Smart contract for DAO proposal NFT for scam reports
