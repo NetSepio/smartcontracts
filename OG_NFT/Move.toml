@@ -1,0 +1,10 @@
+[package]
+name = "commemorative"
+version = "1.0.1"
+
+[addresses]
+admin = "_"
+
+[dependencies]
+AptosTokenObjects = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-token-objects/", rev = "aptos-cli-v2.0.2" }
+reviews = {local = "../reviews_NFT" }

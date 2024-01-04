@@ -1,4 +1,4 @@
-module admin::netsepio{
+module admin::reviews{
 
     //==============================================================================================
     // Dependencies
@@ -19,6 +19,7 @@ module admin::netsepio{
     use aptos_std::simple_map::SimpleMap;
     use std::bcs;
     use std::vector;
+    use aptos_std::string_utils;
 
     #[test_only]
     use aptos_token_objects::royalty;
@@ -32,21 +33,26 @@ module admin::netsepio{
     const ERROR_SIGNER_NOT_OPERATOR: u64 = 2;
     const ERROR_METADATA_DUPLICATED: u64 = 3;
     const ERROR_OTHERS: u64 = 4;
+    const ERROR_REVIEW_DOES_NOT_EXIST: u64 = 5;
+    const ERROR_USER_NO_ROLE: u64 = 6;
+    const ERROR_USER_ALREADY_HAS_ROLE: u64 = 7;
+    const ERROR_INVALID_ROLE_NAME: u64 = 8;
+    const ERROR_WRONG_ROLE: u64 = 9;
 
     //==============================================================================================
     // Constants
     //==============================================================================================
 
     // Seed for resource account creation
-    const SEED: vector<u8> = b"aptosvigilante";
+    const SEED: vector<u8> = b"daptorator";
 
     // Token collection information
-    const COLLECTION_NAME: vector<u8> = b"Review collection name";
-    const COLLECTION_DESCRIPTION: vector<u8> = b"Review collection description";
-    const COLLECTION_URI: vector<u8> = b"Review collection uri";
+    const COLLECTION_NAME: vector<u8> = b"Review collection";
+    const COLLECTION_DESCRIPTION: vector<u8> = b"Beta testnet";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"Review token description";
+    const TOKEN_DESCRIPTION: vector<u8> = b"Beta test reviews";
 
 
     //==============================================================================================
@@ -80,6 +86,8 @@ module admin::netsepio{
     struct State has key {
         // signer cap of the module's resource account
         signer_cap: SignerCapability,
+        // reviews minted
+        count: u128,
         // SimpleMap<Metadata, review_token_address>
         metadatas: SimpleMap<vector<u8>, address>,
         // SimpleMap<siteURL, site_token_address>
@@ -151,6 +159,8 @@ module admin::netsepio{
     struct ReviewDeletedEvent has store, drop {
         // review_hash
         metadata: String,
+        // address of the account deleting the review
+        deleter: address,
         // address of the account owning the review
         reviewer: address,
         // timestamp
@@ -189,14 +199,15 @@ module admin::netsepio{
         // Create the State global resource and move it to the admin account
         let state = State{
             signer_cap: resource_cap,
+            count: 0,
             metadatas: simple_map::new(),
             websites: simple_map::new(),
             roles,
-            role_granted_events: account::new_event_handle<RoleGrantedEvent>(admin),
-            role_removed_events: account::new_event_handle<RoleRemovedEvent>(admin),
-            archive_link_events: account::new_event_handle<ArchiveLinkEvent>(admin),
-            review_submitted_events: account::new_event_handle<ReviewSubmittedEvent>(admin),
-            review_deleted_events: account::new_event_handle<ReviewDeletedEvent>(admin)
+            role_granted_events: account::new_event_handle<RoleGrantedEvent>(&resource_signer),
+            role_removed_events: account::new_event_handle<RoleRemovedEvent>(&resource_signer),
+            archive_link_events: account::new_event_handle<ArchiveLinkEvent>(&resource_signer),
+            review_submitted_events: account::new_event_handle<ReviewSubmittedEvent>(&resource_signer),
+            review_deleted_events: account::new_event_handle<ReviewDeletedEvent>(&resource_signer)
         };
         move_to<State>(admin, state);
     }
@@ -214,6 +225,7 @@ module admin::netsepio{
     ) acquires State {
         let state = borrow_global_mut<State>(@admin);
         assert_appropriate_role(role);
+        assert_user_does_not_have_role(user, state.roles);
         if(role == string::utf8(b"operator")){
             assert_admin(signer::address_of(admin));
             vector::push_back(&mut state.roles.operator, user);
@@ -282,55 +294,12 @@ module admin::netsepio{
         site_ipfs_hash: String
     ) acquires State, Archive {
         {
-            let review_hash = bcs::to_bytes(&metadata);
-            assert_metadata_not_duplicated(review_hash);
-            let state = borrow_global_mut<State>(@admin);
             let reviewer_address = signer::address_of(reviewer);
-            assert_reviewer(reviewer_address, state.roles);
-            let res_signer = account::create_signer_with_capability(&state.signer_cap);
-
-            // Create a new named token:
-            let token_const_ref = token::create_named_token(
-                &res_signer,
-                string::utf8(COLLECTION_NAME),
-                string::utf8(TOKEN_DESCRIPTION),
-                metadata,
-                option::none(),
-                metadata
-            );
-
-            let obj_signer = object::generate_signer(&token_const_ref);
-
-            // Note that since named objects have deterministic addresses, they cannot be deleted.
-            // This is to prevent a malicious user from creating an object with the same seed as a named object and deleting it.
-
-            // Transfer the token to the reviewer account
-            object::transfer_raw(&res_signer, object::address_from_constructor_ref(&token_const_ref), reviewer_address);
-
-            // Create the ReviewToken object and move it to the new token object signer
-            let new_review_token = ReviewToken {
-                mutator_ref: token::generate_mutator_ref(&token_const_ref),
-                burn_ref: token::generate_burn_ref(&token_const_ref),
+            {
+                let state = borrow_global_mut<State>(@admin);
+                assert_reviewer(reviewer_address, state.roles);
             };
-
-            move_to<ReviewToken>(&obj_signer, new_review_token);
-            simple_map::add(&mut state.metadatas, review_hash, object::address_from_constructor_ref(&token_const_ref));
-
-            // Emit a new ReviewSubmittedEvent
-            event::emit_event<ReviewSubmittedEvent>(
-                &mut state.review_submitted_events,
-                ReviewSubmittedEvent {
-                    reviewer: reviewer_address,
-                    review_token_address: object::address_from_constructor_ref(&token_const_ref),
-                    metadata,
-                    category,
-                    domain_address,
-                    site_url,
-                    site_type,
-                    site_tag,
-                    site_safety,
-                    timestamp: timestamp::now_seconds()
-                });
+            submit_review_internal(reviewer_address, metadata, category, domain_address, site_url, site_type, site_tag, site_safety);
         };
 
         //add archive
@@ -340,7 +309,7 @@ module admin::netsepio{
     //delegate mint - will not cost users to mint reviews
     public entry fun delegate_submit_review(
         operator: &signer,
-        reviewer: address,
+        reviewer_address: address,
         metadata: String,
         category: String,
         domain_address: String,
@@ -351,50 +320,11 @@ module admin::netsepio{
         site_ipfs_hash: String
     ) acquires State, Archive {
         {
-            let review_hash = bcs::to_bytes(&metadata);
-            assert_metadata_not_duplicated(review_hash);
-            let state = borrow_global_mut<State>(@admin);
-            assert_operator(signer::address_of(operator), state.roles);
-            let res_signer = account::create_signer_with_capability(&state.signer_cap);
-            // Create a new named token:
-            let token_const_ref = token::create_named_token(
-                &res_signer,
-                string::utf8(COLLECTION_NAME),
-                string::utf8(TOKEN_DESCRIPTION),
-                metadata,
-                option::none(),
-                metadata
-            );
-
-            let obj_signer = object::generate_signer(&token_const_ref);
-
-            // Transfer the token to the reviewer account
-            object::transfer_raw(&res_signer, object::address_from_constructor_ref(&token_const_ref), reviewer);
-
-            // Create the ReviewToken object and move it to the new token object signer
-            let new_review_token = ReviewToken {
-                mutator_ref: token::generate_mutator_ref(&token_const_ref),
-                burn_ref: token::generate_burn_ref(&token_const_ref),
+            {
+                let state = borrow_global_mut<State>(@admin);
+                assert_operator(signer::address_of(operator), state.roles);
             };
-
-            move_to<ReviewToken>(&obj_signer, new_review_token);
-            simple_map::add(&mut state.metadatas, review_hash, object::address_from_constructor_ref(&token_const_ref));
-
-            // Emit a new ReviewSubmittedEvent
-            event::emit_event<ReviewSubmittedEvent>(
-                &mut state.review_submitted_events,
-                ReviewSubmittedEvent {
-                    reviewer,
-                    review_token_address: object::address_from_constructor_ref(&token_const_ref),
-                    metadata,
-                    category,
-                    domain_address,
-                    site_url,
-                    site_type,
-                    site_tag,
-                    site_safety,
-                    timestamp: timestamp::now_seconds()
-                });
+            submit_review_internal(reviewer_address, metadata, category, domain_address, site_url, site_type, site_tag, site_safety);
         };
 
         //add archive
@@ -402,15 +332,17 @@ module admin::netsepio{
     }
 
     public entry fun delete_review(
-        operator: &signer,
+        deleter: &signer,
         metadata: String
     ) acquires State, ReviewToken {
         let review_hash = bcs::to_bytes(&metadata);
         let state = borrow_global_mut<State>(@admin);
-        assert_operator(signer::address_of(operator), state.roles);
+        assert_metadata_exists(review_hash, state.metadatas);
         let review_token_address = *simple_map::borrow(&state.metadatas, &review_hash);
         let review_token_object = object::address_to_object<ReviewToken>(review_token_address);
         let reviewer = object::owner(review_token_object);
+        let deleter_address = signer::address_of(deleter);
+        assert_owner_or_operator(deleter_address, state.roles, reviewer);
         let review_token = move_from<ReviewToken>(review_token_address);
         let ReviewToken{mutator_ref: _, burn_ref} = review_token;
 
@@ -423,6 +355,7 @@ module admin::netsepio{
             &mut state.review_deleted_events,
             ReviewDeletedEvent {
                 metadata,
+                deleter: deleter_address,
                 reviewer,
                 timestamp: timestamp::now_seconds()
             });
@@ -476,15 +409,91 @@ module admin::netsepio{
     }
 
     #[view]
+    public fun check_role(user: address): String acquires State {
+        let state = borrow_global<State>(@admin);
+        if(vector::contains(&state.roles.reviewer, &user)){
+            string::utf8(b"reviewer")
+        }else if(vector::contains(&state.roles.operator, &user)){
+            string::utf8(b"operator")
+        }else{
+            string::utf8(b"N/A")
+        }
+    }
+
+    #[view]
     public fun total_reviews(): u64 acquires State {
         let state = borrow_global<State>(@admin);
         simple_map::length(&state.metadatas)
     }
 
     #[view]
-    public fun total_dapps_reviewed(): u64 acquires State {
+    public fun total_sites_reviewed(): u64 acquires State {
         let state = borrow_global<State>(@admin);
         simple_map::length(&state.websites)
+    }
+
+    // submit review logic
+    inline fun submit_review_internal(
+        reviewer_address: address,
+        metadata: String,
+        category: String,
+        domain_address: String,
+        site_url: String,
+        site_type: String,
+        site_tag: String,
+        site_safety: String
+    ) acquires State {
+        {
+            let review_hash = bcs::to_bytes(&metadata);
+            let state = borrow_global_mut<State>(@admin);
+            assert_metadata_not_duplicated(review_hash, state.metadatas);
+            let res_signer = account::create_signer_with_capability(&state.signer_cap);
+            let count = state.count +1;
+            let name = string_utils::format1(&b"Review #{}", count);
+            // Create a new named token:
+            let token_const_ref = token::create_named_token(
+                &res_signer,
+                string::utf8(COLLECTION_NAME),
+                string::utf8(TOKEN_DESCRIPTION),
+                name,
+                option::none(),
+                string::utf8(COLLECTION_URI)
+            );
+
+            let obj_signer = object::generate_signer(&token_const_ref);
+
+            // Transfer the token to the reviewer account
+            object::transfer_raw(&res_signer, object::address_from_constructor_ref(&token_const_ref), reviewer_address);
+
+            // Create the ReviewToken object and move it to the new token object signer
+            let new_review_token = ReviewToken {
+                mutator_ref: token::generate_mutator_ref(&token_const_ref),
+                burn_ref: token::generate_burn_ref(&token_const_ref),
+            };
+
+            move_to<ReviewToken>(&obj_signer, new_review_token);
+            simple_map::add(&mut state.metadatas, review_hash, object::address_from_constructor_ref(&token_const_ref));
+
+            //block transfer between normal users
+            object::disable_ungated_transfer(&object::generate_transfer_ref(&token_const_ref));
+
+            state.count = count;
+            // Emit a new ReviewSubmittedEvent
+            event::emit_event<ReviewSubmittedEvent>(
+                &mut state.review_submitted_events,
+                ReviewSubmittedEvent {
+                    reviewer: reviewer_address,
+                    review_token_address: object::address_from_constructor_ref(&token_const_ref),
+                    metadata,
+                    category,
+                    domain_address,
+                    site_url,
+                    site_type,
+                    site_tag,
+                    site_safety,
+                    timestamp: timestamp::now_seconds()
+                });
+        };
     }
 
     //==============================================================================================
@@ -495,9 +504,13 @@ module admin::netsepio{
         assert!(admin == @admin, ERROR_SIGNER_NOT_ADMIN);
     }
 
-    inline fun assert_metadata_not_duplicated(review_hash: vector<u8>) {
-        let state = borrow_global<State>(@admin);
-        assert!(!simple_map::contains_key(&state.metadatas, &review_hash), ERROR_METADATA_DUPLICATED);
+    inline fun assert_metadata_not_duplicated(review_hash: vector<u8>, metadatas: SimpleMap<vector<u8>, address>) {
+        assert!(!simple_map::contains_key(&metadatas, &review_hash), ERROR_METADATA_DUPLICATED);
+    }
+
+    inline fun assert_metadata_exists(review_hash: vector<u8>, metadatas: SimpleMap<vector<u8>, address>) {
+
+        assert!(simple_map::contains_key(&metadatas, &review_hash), ERROR_REVIEW_DOES_NOT_EXIST);
     }
 
     inline fun assert_reviewer(user: address, roles: Roles) {
@@ -509,20 +522,33 @@ module admin::netsepio{
     }
 
     inline fun assert_appropriate_role(role: String) {
-        assert!(role == string::utf8(b"operator") || role == string::utf8(b"reviewer") , ERROR_OTHERS);
+        assert!(role == string::utf8(b"operator") || role == string::utf8(b"reviewer") , ERROR_INVALID_ROLE_NAME);
     }
 
     inline fun assert_user_has_role(user: address, roles: Roles) {
-        assert!(vector::contains(&roles.reviewer, &user) || vector::contains(&roles.operator, &user) , ERROR_OTHERS);
+        assert!(vector::contains(&roles.reviewer, &user) || vector::contains(&roles.operator, &user) , ERROR_USER_NO_ROLE);
+    }
+
+    inline fun assert_user_does_not_have_role(user: address, roles: Roles) {
+        assert!(!vector::contains(&roles.reviewer, &user) && !vector::contains(&roles.operator, &user) , ERROR_USER_ALREADY_HAS_ROLE);
     }
 
     inline fun assert_admin_or_operator(user: address, roles: Roles) {
         assert!(vector::contains(&roles.operator, &user) || user == @admin, ERROR_SIGNER_NOT_OPERATOR);
     }
 
+    inline fun assert_owner_or_operator(user: address, roles: Roles, owner: address) {
+        assert!(vector::contains(&roles.operator, &user) || user == owner, ERROR_WRONG_ROLE);
+    }
+
     //==============================================================================================
     // Test functions
     //==============================================================================================
+
+    #[test_only(admin = @admin)]
+    public fun init_module_for_test(admin: &signer){
+        init_module(admin);
+    }
 
     #[test(admin = @admin)]
     fun test_init_module_success(
@@ -556,7 +582,7 @@ module admin::netsepio{
 
         let expected_collection_address = collection::create_collection_address(
             &expected_resource_account_address,
-            &string::utf8(b"Review collection name")
+            &string::utf8(b"Review collection")
         );
         let collection_object = object::address_to_object<collection::Collection>(expected_collection_address);
         assert!(
@@ -564,18 +590,18 @@ module admin::netsepio{
             4
         );
         assert!(
-            collection::name<collection::Collection>(collection_object) == string::utf8(b"Review collection name"),
+            collection::name<collection::Collection>(collection_object) == string::utf8(b"Review collection"),
             4
         );
         assert!(
-            collection::description<collection::Collection>(collection_object) == string::utf8(b"Review collection description"),
+            collection::description<collection::Collection>(collection_object) == string::utf8(b"Beta testnet"),
             4
         );
         assert!(
-            collection::uri<collection::Collection>(collection_object) == string::utf8(b"Review collection uri"),
+            collection::uri<collection::Collection>(collection_object) == string::utf8(b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/"),
             4
         );
-
+        assert!(state.count == 0, 4);
         assert!(event::counter(&state.review_submitted_events) == 0, 4);
         assert!(event::counter(&state.review_deleted_events) == 0, 4);
     }
@@ -625,10 +651,11 @@ module admin::netsepio{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
-            &metadata
+            &string::utf8(b"Review collection"),
+            &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
         assert!(
@@ -640,15 +667,15 @@ module admin::netsepio{
             4
         );
         assert!(
-            token::name(review_token_object) == metadata,
+            token::name(review_token_object) == expected_name,
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Review token description"),
+            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
             4
         );
         assert!(
-            token::uri(review_token_object) == metadata,
+            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(
@@ -811,10 +838,11 @@ module admin::netsepio{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
-            &metadata
+            &string::utf8(b"Review collection"),
+            &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
         assert!(
@@ -826,15 +854,15 @@ module admin::netsepio{
             4
         );
         assert!(
-            token::name(review_token_object) == metadata,
+            token::name(review_token_object) == expected_name,
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Review token description"),
+            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
             4
         );
         assert!(
-            token::uri(review_token_object) == metadata,
+            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(
@@ -941,10 +969,11 @@ module admin::netsepio{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
-            &metadata
+            &string::utf8(b"Review collection"),
+            &expected_name
         );
 
         grant_role(
@@ -968,8 +997,8 @@ module admin::netsepio{
     }
 
     #[test(admin = @admin, reviewer = @0xA, operator = @0xB)]
-    #[expected_failure(abort_code = ERROR_SIGNER_NOT_OPERATOR)]
-    fun test_delete_review_failure_not_operator(
+    #[expected_failure(abort_code = ERROR_WRONG_ROLE)]
+    fun test_delete_review_failure_not_operator_nor_owner(
         admin: &signer,
         operator: &signer,
         reviewer: &signer
@@ -1053,7 +1082,7 @@ module admin::netsepio{
     }
 
     #[test(admin = @admin, reviewer = @0xA)]
-    #[expected_failure(abort_code = ERROR_OTHERS)]
+    #[expected_failure(abort_code = ERROR_INVALID_ROLE_NAME)]
     fun test_grant_role_failure_wrong_role(
         admin: &signer,
         reviewer: &signer
@@ -1139,7 +1168,7 @@ module admin::netsepio{
     }
 
     #[test(admin = @admin, user = @0xB)]
-    #[expected_failure(abort_code = ERROR_OTHERS)]
+    #[expected_failure(abort_code = ERROR_USER_NO_ROLE)]
     fun test_remove_role_failure_user_has_no_role(
         admin: &signer,
         user: &signer
@@ -1204,10 +1233,11 @@ module admin::netsepio{
 
         let resource_account_address = account::create_resource_address(&@admin, SEED);
 
+        let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection name"),
-            &metadata
+            &string::utf8(b"Review collection"),
+            &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
         assert!(
@@ -1219,15 +1249,15 @@ module admin::netsepio{
             4
         );
         assert!(
-            token::name(review_token_object) == metadata,
+            token::name(review_token_object) == expected_name,
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Review token description"),
+            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
             4
         );
         assert!(
-            token::uri(review_token_object) == metadata,
+            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(

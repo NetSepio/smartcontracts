@@ -1,24 +1,12 @@
 # Smart Contracts
-Smart Contracts for the NetSepio Reviews for Aptos Blockchain
 
-Deployed to testnet under contract address: 1da41025906f10f17f74f6c6851cb3d192acdd31131123f67e800aa5358b5bc1
+Deployed to testnet: 75bcfe882d1a4d032ead2b47f377e4c95221594d66ab2bd09a61aded4c9d64f9
 
-Entry Functions:
-- grant_role
-- remove_role
-- submit_review
-- delegate_submit_review
-- delete_review
-- archive_link
+## **1. reviews_NFT**
+Smart contract for submit & delete reviews, grant operator/reviewer roles, view functions, etc.
 
-View Functions:
-- check_if_metadata_exists
-- total_dapps_reviewed
-- total_reviews
+## **2. OG_NFT**
+Smart contract for commemorative NFT for first 500 beta testers
 
-Events:
-- RoleGrantedEvent
-- RoleRemovedEvent
-- ArchiveLinkEvent
-- ReviewSubmittedEvent
-- ReviewDeletedEvent
+## **2. DAO_NFT**
+Smart contract for DAO proposal NFT for scam reports
