@@ -328,7 +328,7 @@ module admin::report_dao{
     }
 
     inline fun assert_proposal_is_open(proposals: SimpleMap<address,bool>, obj_add: address) {
-        assert!(*simple_map::borrow(&proposals, &obj_add), ERROR_PROPOSAL_ALREADY_CLOSED);
+        assert!(!*simple_map::borrow(&proposals, &obj_add), ERROR_PROPOSAL_ALREADY_CLOSED);
     }
 
     //==============================================================================================
