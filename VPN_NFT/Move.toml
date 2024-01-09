@@ -1,10 +1,12 @@
 [package]
-name = "report_dao_v1"
-version = "1.0.1"
+name = "vpn"
+version = "1.0.3"
 upgrade_policy = "compatible"
 
 [addresses]
 admin = "_"
+SEED = "0xE0EEBE3"
+wv1 = "0xa981aee454f8c9c466c562923678a1a9011e00b3183c7cbdfdae2aacd65f6d9c"
 
 [dependencies]
 AptosTokenObjects = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-token-objects/", rev = "aptos-cli-v2.0.2" }

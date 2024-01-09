@@ -43,16 +43,13 @@ module admin::reviews{
     // Constants
     //==============================================================================================
 
-    // Seed for resource account creation
-    const SEED: vector<u8> = b"daptorator";
-
     // Token collection information
     const COLLECTION_NAME: vector<u8> = b"Review collection";
-    const COLLECTION_DESCRIPTION: vector<u8> = b"Beta testnet";
+    const COLLECTION_DESCRIPTION: vector<u8> = b"Share your web3 insight on NetSepio";
     const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"Beta test reviews";
+    const TOKEN_DESCRIPTION: vector<u8> = b"community reviews";
 
 
     //==============================================================================================
@@ -178,7 +175,9 @@ module admin::reviews{
     */
     fun init_module(admin: &signer) {
         assert_admin(signer::address_of(admin));
-        let (resource_signer, resource_cap) = account::create_resource_account(admin, SEED);
+
+        let seed = bcs::to_bytes(&@SEED);
+        let (resource_signer, resource_cap) = account::create_resource_account(admin, seed);
 
         coin::register<AptosCoin>(&resource_signer);
 
@@ -562,7 +561,8 @@ module admin::reviews{
 
         init_module(admin);
 
-        let expected_resource_account_address = account::create_resource_address(&admin_address, SEED);
+        let seed = bcs::to_bytes(&@SEED);
+        let expected_resource_account_address = account::create_resource_address(&admin_address, seed);
         assert!(account::exists_at(expected_resource_account_address), 0);
 
         let state = borrow_global<State>(admin_address);
@@ -648,8 +648,8 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-
-        let resource_account_address = account::create_resource_address(&@admin, SEED);
+        let seed = bcs::to_bytes(&@SEED);
+        let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
@@ -836,7 +836,8 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-        let resource_account_address = account::create_resource_address(&@admin, SEED);
+        let seed = bcs::to_bytes(&@SEED);
+        let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
@@ -967,7 +968,8 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-        let resource_account_address = account::create_resource_address(&@admin, SEED);
+        let seed = bcs::to_bytes(&@SEED);
+        let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
@@ -1230,8 +1232,8 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-
-        let resource_account_address = account::create_resource_address(&@admin, SEED);
+        let seed = bcs::to_bytes(&@SEED);
+        let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(

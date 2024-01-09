@@ -1,4 +1,4 @@
-module admin::report_dao{
+module admin::report_dao_v1{
     //==============================================================================================
     // Dependencies
     //==============================================================================================
@@ -15,7 +15,6 @@ module admin::report_dao{
     use aptos_framework::timestamp;
     use aptos_framework::option;
     use std::string_utils;
-    use std::vector;
     use aptos_std::simple_map;
     use aptos_std::simple_map::SimpleMap;
     //use std::debug;
@@ -39,7 +38,7 @@ module admin::report_dao{
     //==============================================================================================
 
     // Seed for resource account creation
-    const SEED: vector<u8> = b"voting";
+    const SEED: vector<u8> = b"dao";
 
 
     // NFT collection information
@@ -69,8 +68,8 @@ module admin::report_dao{
         signer_cap: SignerCapability,
         // NFT count
         minted: u64,
-        //metadata
-        metadatas: vector<String>,
+        //metadata, proposal_nft_obj_add
+        metadatas: SimpleMap<String, address>,
         // proposal_nft_obj_add, true for resolved, false for open
         proposal_list: SimpleMap<address, bool>,
         // Events
@@ -147,7 +146,7 @@ module admin::report_dao{
         let state = State{
             signer_cap: resource_cap,
             minted: 0,
-            metadatas: vector::empty(),
+            metadatas: simple_map::create(),
             proposal_list: simple_map::create(),
             proposal_created_events: account::new_event_handle<ProposalCreatedEvent>(&resource_signer),
             proposal_resolved_events: account::new_event_handle<ProposalResolvedEvent>(&resource_signer),
@@ -188,7 +187,7 @@ module admin::report_dao{
         move_to<NftToken>(&obj_signer, new_nft_token);
 
         state.minted = current_proposal;
-        vector::push_back(&mut state.metadatas, metadata);
+        simple_map::add(&mut state.metadatas, metadata, obj_add);
         simple_map::add(&mut state.proposal_list, obj_add, false);
 
         //block transfer between normal users
@@ -205,11 +204,13 @@ module admin::report_dao{
             });
     }
 
-    public entry fun resolve_proposal(operator: &signer, obj_add: address, metadata: String) acquires State, NftToken{
+    public entry fun resolve_proposal(operator: &signer, old_metadata: String, new_metadata: String) acquires State, NftToken{
         assert_operator(admin::reviews::check_role(signer::address_of(operator)));
+        let obj_add;
         {
             let state = borrow_global<State>(@admin);
-            assert_proposal_exists(state.proposal_list, obj_add);
+            assert_proposal_exists(state.metadatas, old_metadata);
+            obj_add = *simple_map::borrow(&state.metadatas, &old_metadata);
             assert_proposal_is_open(state.proposal_list, obj_add);
         };
         let token_obj = object::address_to_object<NftToken>(obj_add);
@@ -217,7 +218,7 @@ module admin::report_dao{
         let token_owner = object::owner(token_obj);
 
         {
-            burn_token_internal(obj_add);
+            burn_token_internal(old_metadata, obj_add);
         };
 
         let state = borrow_global_mut<State>(@admin);
@@ -227,7 +228,7 @@ module admin::report_dao{
         let token_const_ref = token::create_named_token(
             &res_signer,
             string::utf8(RESOLVED_COLLECTION_NAME),
-            metadata,
+            new_metadata,
             token_name,
             option::none(),
             string::utf8(RESOLVED_COLLECTION_URI)
@@ -248,6 +249,7 @@ module admin::report_dao{
 
         move_to<NftToken>(&obj_signer, new_nft_token);
 
+        simple_map::add(&mut state.metadatas, new_metadata, new_obj_add);
         simple_map::add(&mut state.proposal_list, new_obj_add, true);
 
         //block transfer between normal users
@@ -263,16 +265,18 @@ module admin::report_dao{
             });
     }
 
-    public entry fun delete_proposal(operator: &signer, obj_add: address) acquires State, NftToken{
+    public entry fun delete_proposal(operator: &signer, metadata: String) acquires State, NftToken{
         assert_operator(admin::reviews::check_role(signer::address_of(operator)));
+        let obj_add;
         {
             let state = borrow_global<State>(@admin);
-            assert_proposal_exists(state.proposal_list, obj_add);
+            assert_proposal_exists(state.metadatas, metadata);
+            obj_add = *simple_map::borrow(& state.metadatas, &metadata);
             assert_proposal_is_open(state.proposal_list, obj_add);
         };
 
         {
-            burn_token_internal(obj_add);
+            burn_token_internal(metadata, obj_add);
         };
 
         let state = borrow_global_mut<State>(@admin);
@@ -290,14 +294,14 @@ module admin::report_dao{
     // Helper functions
     //==============================================================================================
 
-    inline fun burn_token_internal(obj_add: address) {
+    inline fun burn_token_internal(metdata: String, obj_add: address) {
         let state = borrow_global_mut<State>(@admin);
         let review_token = move_from<NftToken>(obj_add);
         let NftToken{mutator_ref: _, burn_ref, transfer_ref: _} = review_token;
 
         // Burn the the token
         token::burn(burn_ref);
-
+        simple_map::remove(&mut state.metadatas, &metdata);
         simple_map::remove(&mut state.proposal_list, &obj_add);
     }
 
@@ -305,6 +309,19 @@ module admin::report_dao{
     public fun total_proposals(): u64 acquires State {
         let state = borrow_global<State>(@admin);
         state.minted
+    }
+
+    #[view]
+    public fun view_nft_address(metadata: String): address acquires State {
+        let state = borrow_global<State>(@admin);
+        *simple_map::borrow(&state.metadatas, &metadata)
+    }
+
+    #[view]
+    public fun is_proposal_open(metadata: String): bool acquires State {
+        let state = borrow_global<State>(@admin);
+        let obj_add = *simple_map::borrow(&state.metadatas, &metadata);
+        !*simple_map::borrow(&state.proposal_list, &obj_add)
     }
 
     //==============================================================================================
@@ -319,16 +336,16 @@ module admin::report_dao{
         assert!(check_role_return == string::utf8(b"operator") , ERROR_SIGNER_NOT_OPERATOR);
     }
 
-    inline fun assert_proposal_does_not_already_exists(metadatas: vector<String>, metadata: String) {
-        assert!(!vector::contains(&metadatas, &metadata), ERROR_PROPOSAL_ALREADY_EXISTS);
+    inline fun assert_proposal_does_not_already_exists(metadatas: SimpleMap<String, address>, metadata: String) {
+        assert!(!simple_map::contains_key(&metadatas, &metadata), ERROR_PROPOSAL_ALREADY_EXISTS);
     }
 
-    inline fun assert_proposal_exists(proposals: SimpleMap<address,bool>, obj_add: address) {
-        assert!(simple_map::contains_key(&proposals, &obj_add), ERROR_PROPOSAL_DOES_NOT_EXIST);
+    inline fun assert_proposal_exists(metadatas: SimpleMap<String, address>, metadata: String) {
+        assert!(simple_map::contains_key(&metadatas, &metadata), ERROR_PROPOSAL_DOES_NOT_EXIST);
     }
 
     inline fun assert_proposal_is_open(proposals: SimpleMap<address,bool>, obj_add: address) {
-        assert!(*simple_map::borrow(&proposals, &obj_add), ERROR_PROPOSAL_ALREADY_CLOSED);
+        assert!(!*simple_map::borrow(&proposals, &obj_add), ERROR_PROPOSAL_ALREADY_CLOSED);
     }
 
     //==============================================================================================

@@ -1,9 +1,10 @@
 [package]
 name = "reviews"
-version = "1.0.2"
+version = "1.0.6"
 
 [addresses]
 admin = "_"
+SEED = "0xE1E3E06"
 
 [dependencies]
 AptosTokenObjects = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-token-objects/", rev = "aptos-cli-v2.0.2" }
