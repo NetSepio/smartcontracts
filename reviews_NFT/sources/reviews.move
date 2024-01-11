@@ -176,7 +176,7 @@ module admin::reviews{
     fun init_module(admin: &signer) {
         assert_admin(signer::address_of(admin));
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@RSEED);
         let (resource_signer, resource_cap) = account::create_resource_account(admin, seed);
 
         coin::register<AptosCoin>(&resource_signer);
@@ -456,7 +456,7 @@ module admin::reviews{
                 string::utf8(TOKEN_DESCRIPTION),
                 name,
                 option::none(),
-                string::utf8(COLLECTION_URI)
+                metadata
             );
 
             let obj_signer = object::generate_signer(&token_const_ref);
@@ -561,7 +561,7 @@ module admin::reviews{
 
         init_module(admin);
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@RSEED);
         let expected_resource_account_address = account::create_resource_address(&admin_address, seed);
         assert!(account::exists_at(expected_resource_account_address), 0);
 
@@ -594,7 +594,7 @@ module admin::reviews{
             4
         );
         assert!(
-            collection::description<collection::Collection>(collection_object) == string::utf8(b"Beta testnet"),
+            collection::description<collection::Collection>(collection_object) == string::utf8(COLLECTION_DESCRIPTION),
             4
         );
         assert!(
@@ -648,13 +648,13 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@RSEED);
         let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection"),
+            &string::utf8(COLLECTION_NAME),
             &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
@@ -671,11 +671,11 @@ module admin::reviews{
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
+            token::description(review_token_object) == string::utf8(TOKEN_DESCRIPTION),
             4
         );
         assert!(
-            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
+            token::uri(review_token_object) == metadata,
             4
         );
         assert!(
@@ -836,13 +836,13 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@RSEED);
         let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection"),
+            &string::utf8(COLLECTION_NAME),
             &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
@@ -859,11 +859,11 @@ module admin::reviews{
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
+            token::description(review_token_object) == string::utf8(TOKEN_DESCRIPTION),
             4
         );
         assert!(
-            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
+            token::uri(review_token_object) == metadata,
             4
         );
         assert!(
@@ -968,13 +968,13 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@RSEED);
         let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection"),
+            &string::utf8(COLLECTION_NAME),
             &expected_name
         );
 
@@ -1232,13 +1232,13 @@ module admin::reviews{
             site_ipfs_hash
         );
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@RSEED);
         let resource_account_address = account::create_resource_address(&@admin, seed);
 
         let expected_name = string_utils::format1(&b"Review #{}", 1);
         let expected_review_token_address = token::create_token_address(
             &resource_account_address,
-            &string::utf8(b"Review collection"),
+            &string::utf8(COLLECTION_NAME),
             &expected_name
         );
         let review_token_object = object::address_to_object<token::Token>(expected_review_token_address);
@@ -1255,11 +1255,11 @@ module admin::reviews{
             4
         );
         assert!(
-            token::description(review_token_object) == string::utf8(b"Beta test reviews"),
+            token::description(review_token_object) == string::utf8(TOKEN_DESCRIPTION),
             4
         );
         assert!(
-            token::uri(review_token_object) == string::utf8(COLLECTION_URI),
+            token::uri(review_token_object) == metadata,
             4
         );
         assert!(
