@@ -1,4 +1,4 @@
-module admin::vpn{
+module admin::erebrus{
     //==============================================================================================
     // Dependencies
     //==============================================================================================
@@ -32,6 +32,7 @@ module admin::vpn{
     const ERROR_SIGNER_NOT_OPERATOR: u64 = 2;
     const ERROR_OTHERS: u64 = 4;
     const ERROR_INSUFFICIENT_BALANCE: u64 = 5;
+    const ERROR_MINTER_MINTED: u64 = 6;
 
     //==============================================================================================
     // Constants
@@ -44,12 +45,13 @@ module admin::vpn{
     const SUPPLY: u64 = 111;
 
     // NFT collection information
-    const COLLECTION_NAME: vector<u8> = b"VPN NFT";
-    const COLLECTION_DESCRIPTION: vector<u8> = b"Erebrus 111";
-    const COLLECTION_URI: vector<u8> = b"ipfs://bafybeibtylktrbov5v4m6detxpt3tld2rcjbcd6a34wawceazkybtvzxwy/";
+    const COLLECTION_NAME: vector<u8> = b"EREBRUS";
+    const COLLECTION_DESCRIPTION: vector<u8> = b"111 VPN Utility NFT with 11 distinct characters";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafybeiakibvianmzrecxzyh6oonapk7fqggburcfsseildhhgrbxh3tz2u/111nft.png";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"NFT token description";
+    const TOKEN_DESCRIPTION: vector<u8> = b"Erebrus 111 VPN NFT";
+    const TOKEN_URI: vector<u8> = b"ipfs://bafybeidpuars3e6phzz34fpwnkbt6fl7epkie7hxzbd3gwnqjzbxw6n3ri/";
 
     //==============================================================================================
     // Module Structs
@@ -69,6 +71,8 @@ module admin::vpn{
         signer_cap: SignerCapability,
         // NFT count
         minted: u64,
+        //minter
+        minter: vector<address>,
         // minted_nft_obj_add
         nft_list: vector<address>,
         // Events
@@ -101,12 +105,10 @@ module admin::vpn{
     fun init_module(admin: &signer) {
         assert_admin(signer::address_of(admin));
         // Seed for resource account creation
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@VSEED);
         let (resource_signer, resource_cap) = account::create_resource_account(admin, seed);
 
-        coin::register<AptosCoin>(&resource_signer);
-
-        let royalty = royalty::create(5,10,@admin);
+        let royalty = royalty::create(5,10,@wv1);
 
         // Create an NFT collection with an unlimied supply and the following aspects:
         collection::create_fixed_collection(
@@ -122,21 +124,23 @@ module admin::vpn{
         let state = State{
             signer_cap: resource_cap,
             minted: 0,
+            minter: vector::empty(),
             nft_list: vector::empty(),
             nft_minted_events: account::new_event_handle<NftMintedEvent>(&resource_signer)
         };
         move_to<State>(admin, state);
     }
 
-    public entry fun user_mint_NFT(minter: &signer) acquires State{
+    public entry fun user_mint(minter: &signer) acquires State{
         let user_add = signer::address_of(minter);
+        assert_new_minter(user_add);
         check_if_user_has_enough_apt(user_add,PRICE_APT) ;
         //payment
         coin::transfer<AptosCoin>(minter, @wv1, PRICE_APT);
         mint_internal(user_add);
     }
 
-    public entry fun delegate_mint_NFT(operator: &signer, minter: address) acquires State{
+    public entry fun delegate_mint(operator: &signer, minter: address) acquires State{
         assert_operator(admin::reviews::check_role(signer::address_of(operator)));
         mint_internal(minter);
     }
@@ -154,7 +158,7 @@ module admin::vpn{
         let res_signer = account::create_signer_with_capability(&state.signer_cap);
 
         let royalty = royalty::create(5,10,@wv1);
-        let uri = string::utf8(COLLECTION_URI);
+        let uri = string::utf8(TOKEN_URI);
         string::append(&mut uri, string_utils::format1(&b"{}.json", current_nft));
         // Create a new named token:
         let token_const_ref = token::create_named_token(
@@ -182,6 +186,7 @@ module admin::vpn{
         move_to<NftToken>(&obj_signer, new_nft_token);
 
         state.minted = current_nft;
+        vector::push_back(&mut state.minter, user);
         vector::push_back(&mut state.nft_list, obj_add);
 
         // Emit a new NftMintedEvent
@@ -213,6 +218,11 @@ module admin::vpn{
         assert!(check_role_return == string::utf8(b"operator") , ERROR_SIGNER_NOT_OPERATOR);
     }
 
+    inline fun assert_new_minter(minter: address) {
+        let state = borrow_global<State>(@admin);
+        assert!(!vector::contains(&state.minter, &minter), ERROR_MINTER_MINTED);
+    }
+
     inline fun assert_supply_not_exceeded(minted: u64) {
         assert!(minted < SUPPLY, ERROR_SUPPLY_EXCEEDED);
     }
@@ -239,7 +249,7 @@ module admin::vpn{
 
         init_module(admin);
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@VSEED);
         let expected_resource_account_address = account::create_resource_address(&admin_address, seed);
         assert!(account::exists_at(expected_resource_account_address), 0);
 
@@ -247,11 +257,6 @@ module admin::vpn{
         assert!(
             account::get_signer_capability_address(&state.signer_cap) == expected_resource_account_address,
             0
-        );
-
-        assert!(
-            coin::is_account_registered<AptosCoin>(expected_resource_account_address),
-            4
         );
 
         let expected_collection_address = collection::create_collection_address(
@@ -279,31 +284,35 @@ module admin::vpn{
         assert!(event::counter(&state.nft_minted_events) == 0, 4);
     }
 
-    #[test(admin = @admin, user = @0xA)]
+    #[test(admin = @admin, user = @0xA, bank = @wv1)]
     fun test_mint_success(
         admin: &signer,
-        user: &signer
+        user: &signer,
+        bank: &signer
     ) acquires State {
         let admin_address = signer::address_of(admin);
         let user_address = signer::address_of(user);
+        let bank_address = signer::address_of(bank);
         account::create_account_for_test(admin_address);
         account::create_account_for_test(user_address);
+        account::create_account_for_test(bank_address);
 
         let aptos_framework = account::create_account_for_test(@aptos_framework);
         timestamp::set_time_has_started_for_testing(&aptos_framework);
         let (burn_cap, mint_cap) =
             aptos_coin::initialize_for_test(&aptos_framework);
         coin::register<AptosCoin>(user);
+        coin::register<AptosCoin>(bank);
         init_module(admin);
         aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
 
-        let image_uri = string::utf8(COLLECTION_URI);
+        let image_uri = string::utf8(TOKEN_URI);
         string::append(&mut image_uri, string_utils::format1(&b"{}.json",1));
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@VSEED);
         let resource_account_address = account::create_resource_address(&@admin, seed);
 
-        user_mint_NFT(user);
+        user_mint(user);
 
         let state = borrow_global<State>(admin_address);
 
@@ -349,16 +358,19 @@ module admin::vpn{
 
     }
 
-    #[test(admin = @admin, user = @0xA)]
+    #[test(admin = @admin, user = @0xA, bank = @wv1)]
     #[expected_failure(abort_code = ERROR_SUPPLY_EXCEEDED)]
-    fun test_mint_failed(
+    fun test_mint_failed_supply_exceeded(
         admin: &signer,
-        user: &signer
+        user: &signer,
+        bank: &signer
     ) acquires State {
         let admin_address = signer::address_of(admin);
         let user_address = signer::address_of(user);
+        let bank_address = signer::address_of(bank);
         account::create_account_for_test(admin_address);
         account::create_account_for_test(user_address);
+        account::create_account_for_test(bank_address);
 
         let aptos_framework = account::create_account_for_test(@aptos_framework);
         timestamp::set_time_has_started_for_testing(&aptos_framework);
@@ -366,6 +378,8 @@ module admin::vpn{
         let (burn_cap, mint_cap) =
             aptos_coin::initialize_for_test(&aptos_framework);
         coin::register<AptosCoin>(user);
+        coin::register<AptosCoin>(bank);
+
         init_module(admin);
         aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
 
@@ -374,7 +388,39 @@ module admin::vpn{
             state.minted = 500;
         };
 
-        user_mint_NFT(user);
+        user_mint(user);
+
+        coin::destroy_burn_cap(burn_cap);
+        coin::destroy_mint_cap(mint_cap);
+    }
+
+    #[test(admin = @admin, user = @0xA, bank = @wv1)]
+    #[expected_failure(abort_code = ERROR_MINTER_MINTED)]
+    fun test_mint_failed_minter_minted(
+        admin: &signer,
+        user: &signer,
+        bank: &signer
+    ) acquires State {
+        let admin_address = signer::address_of(admin);
+        let user_address = signer::address_of(user);
+        let bank_address = signer::address_of(bank);
+        account::create_account_for_test(admin_address);
+        account::create_account_for_test(user_address);
+        account::create_account_for_test(bank_address);
+
+        let aptos_framework = account::create_account_for_test(@aptos_framework);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        let (burn_cap, mint_cap) =
+            aptos_coin::initialize_for_test(&aptos_framework);
+        coin::register<AptosCoin>(user);
+        coin::register<AptosCoin>(bank);
+
+        init_module(admin);
+        aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
+
+        user_mint(user);
+        user_mint(user);
 
         coin::destroy_burn_cap(burn_cap);
         coin::destroy_mint_cap(mint_cap);
@@ -408,13 +454,13 @@ module admin::vpn{
             string::utf8(b"operator")
         );
 
-        let image_uri = string::utf8(COLLECTION_URI);
+        let image_uri = string::utf8(TOKEN_URI);
         string::append(&mut image_uri, string_utils::format1(&b"{}.json",1));
 
-        let seed = bcs::to_bytes(&@SEED);
+        let seed = bcs::to_bytes(&@VSEED);
         let resource_account_address = account::create_resource_address(&@admin, seed);
 
-        delegate_mint_NFT(operator, user_address);
+        delegate_mint(operator, user_address);
 
         let state = borrow_global<State>(admin_address);
 
@@ -477,7 +523,7 @@ module admin::vpn{
         admin::reviews::init_module_for_test(admin);
         init_module(admin);
 
-        delegate_mint_NFT(operator, user_address);
+        delegate_mint(operator, user_address);
     }
 
 }
