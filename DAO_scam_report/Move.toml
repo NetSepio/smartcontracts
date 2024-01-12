@@ -1,6 +1,7 @@
 [package]
-name = "report_dao"
-version = "1.0.0"
+name = "report_dao_v1"
+version = "1.0.1"
+upgrade_policy = "compatible"
 
 [addresses]
 admin = "_"
