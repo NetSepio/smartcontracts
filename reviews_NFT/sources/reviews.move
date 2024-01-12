@@ -43,14 +43,16 @@ module admin::reviews{
     // Constants
     //==============================================================================================
 
-    // Token collection information
-    const COLLECTION_NAME: vector<u8> = b"Review collection";
+    // Contract Version
+    const VERSION: vector<u8> = b"v1.0";
+
+    // Token Collection Information
+    const COLLECTION_NAME: vector<u8> = b"NetSepio Reviews";
     const COLLECTION_DESCRIPTION: vector<u8> = b"Share your web3 insight on NetSepio";
-    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"community reviews";
-
+    const TOKEN_DESCRIPTION: vector<u8> = b"REVIEWS NFT";
 
     //==============================================================================================
     // Module Structs
@@ -129,8 +131,8 @@ module admin::reviews{
         // archive logger
         logger: address,
         // previous ipfs, current ipfs
-        previous_ipfs: String,
-        current_ipfs: String,
+        previous_archive_link: String,
+        current_archive_link: String,
         // timestamp
         timestamp: u64
     }
@@ -181,7 +183,7 @@ module admin::reviews{
 
         coin::register<AptosCoin>(&resource_signer);
 
-        // Create an NFT collection with an unlimied supply and the following aspects:
+        // Create a NFT collection with an unlimied supply with the following aspects:
         collection::create_unlimited_collection(
             &resource_signer,
             string::utf8(COLLECTION_DESCRIPTION),
@@ -280,7 +282,7 @@ module admin::reviews{
     Mints a new ReviewToken for the reviewer account
     @param admin - admin signer
     @param reviewer - signer representing the account reviewing the project
-*/
+    */
     public entry fun submit_review(
         reviewer: &signer,
         metadata: String,
@@ -301,7 +303,7 @@ module admin::reviews{
             submit_review_internal(reviewer_address, metadata, category, domain_address, site_url, site_type, site_tag, site_safety);
         };
 
-        //add archive
+        // TODO: add archive only if the site_ipfs_hash is not null
         archive_link(reviewer, site_url, site_ipfs_hash);
     }
 
@@ -326,7 +328,7 @@ module admin::reviews{
             submit_review_internal(reviewer_address, metadata, category, domain_address, site_url, site_type, site_tag, site_safety);
         };
 
-        //add archive
+        // TODO: add archive only if the site_ipfs_hash is not null
         archive_link(operator, site_url, site_ipfs_hash);
     }
 
@@ -391,8 +393,8 @@ module admin::reviews{
             &mut state.archive_link_events,
             ArchiveLinkEvent {
                 logger: signer::address_of(user),
-                previous_ipfs: previous_archive,
-                current_ipfs: site_ipfs_hash,
+                previous_archive_link: previous_archive,
+                current_archive_link: site_ipfs_hash,
                 timestamp: timestamp::now_seconds()
             });
     }
