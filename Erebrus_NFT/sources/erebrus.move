@@ -52,7 +52,7 @@ module admin::erebrus{
     // NFT collection information
     const COLLECTION_NAME: vector<u8> = b"EREBRUS";
     const COLLECTION_DESCRIPTION: vector<u8> = b"Erebrus, by NetSepio. 111 innovative utility NFT that offers you access to a blockchain-backed, distributed Anonymous VPN.";
-    const COLLECTION_URI: vector<u8> = b"ipfs://bafybeiakibvianmzrecxzyh6oonapk7fqggburcfsseildhhgrbxh3tz2u/111nft.png";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafybeidvpe6xdwribm5qjywrvucqys34rte26uukp6hqq3lolefd7ddjoq/erebrus_collection_uri.gif";
 
     // Token information
     const TOKEN_DESCRIPTION: vector<u8> = b"Erebrus NFT";
