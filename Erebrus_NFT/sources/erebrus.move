@@ -43,7 +43,7 @@ module admin::erebrus{
     // Contract Version
     const VERSION: u64 = 1;
 
-    //Price
+    // Mint Price
     const MINT_PRICE: u64 = 111000000; // 1.11 APT
 
     // Supply limit
@@ -140,7 +140,7 @@ module admin::erebrus{
         let user_add = signer::address_of(minter);
         assert_new_minter(user_add);
         check_if_user_has_enough_apt(user_add, MINT_PRICE) ;
-        //payment
+        // Payment
         coin::transfer<AptosCoin>(minter, @wv1, MINT_PRICE);
         mint_internal(user_add);
     }
@@ -151,10 +151,10 @@ module admin::erebrus{
     }
 
     /*
-    Grants operator roles
-    @param admin - admin signer
-    @param user - user address
-*/
+        Grants operator roles
+        @param admin - admin signer
+        @param user - user address
+    */
     public entry fun grant_role(
         admin: &signer,
         user: address
@@ -166,10 +166,10 @@ module admin::erebrus{
     }
 
     /*
-    Revoke operator roles
-    @param admin - admin signer
-    @param user - user address
-*/
+        Revoke operator roles
+        @param admin - admin signer
+        @param user - user address
+    */
     public entry fun revoke_role(
         admin: &signer,
         user: address
@@ -208,10 +208,10 @@ module admin::erebrus{
         let obj_signer = object::generate_signer(&token_const_ref);
         let obj_add = object::address_from_constructor_ref(&token_const_ref);
 
-        // Transfer the token to the reviewer account
+        // Transfer the token to the user account
         object::transfer_raw(&res_signer, obj_add, user);
 
-        // Create the ReviewToken object and move it to the new token object signer
+        // Create the ErebrusToken object and move it to the new token object signer
         let new_nft_token = ErebrusToken {
             mutator_ref: token::generate_mutator_ref(&token_const_ref),
             burn_ref: token::generate_burn_ref(&token_const_ref),
