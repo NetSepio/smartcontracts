@@ -47,9 +47,9 @@ module admin::reviews{
     const VERSION: u64 = 1;
 
     // Token collection information
-    const COLLECTION_NAME: vector<u8> = b"NETSEPIO ";
+    const COLLECTION_NAME: vector<u8> = b"NETSEPIO REVIEWS";
     const COLLECTION_DESCRIPTION: vector<u8> = b"Share your web3 insight on NetSepio";
-    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja";
 
     // Token information
     const TOKEN_DESCRIPTION: vector<u8> = b"REVIEWS NFT";
