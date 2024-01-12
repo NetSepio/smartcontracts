@@ -1,7 +1,10 @@
 # Reviews_NFT
 Smart Contract for the NetSepio Reviews for Aptos Blockchain
 
-_Currently deployed on testnet:_ 75bcfe882d1a4d032ead2b47f377e4c95221594d66ab2bd09a61aded4c9d64f9
+_Mainnet Deployment:_ 0xc2047066ac28da8e0e7c0988aaa15c283ca38109c4d8dfc1d60a89a69809608e
+
+
+_Testnet Deployment:_ 75bcfe882d1a4d032ead2b47f377e4c95221594d66ab2bd09a61aded4c9d64f9
 
 Entry Functions:
 - grant_role

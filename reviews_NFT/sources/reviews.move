@@ -49,10 +49,10 @@ module admin::reviews{
     // Token collection information
     const COLLECTION_NAME: vector<u8> = b"NETSEPIO REVIEWS";
     const COLLECTION_DESCRIPTION: vector<u8> = b"Share your web3 insight on NetSepio";
-    const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja";
+    const COLLECTION_URI: vector<u8> = b"ipfs://bafybeiejnrheh6inrlkwrafytrpzyy4oqcxmxqqeclci4wmlostah2iw2q/collection_uri.png";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"REVIEWS NFT";
+    const TOKEN_DESCRIPTION: vector<u8> = b"REVIEW NFT";
 
 
     //==============================================================================================
@@ -131,7 +131,7 @@ module admin::reviews{
     struct ArchiveLinkEvent has store, drop {
         // archive logger
         logger: address,
-        // previous archive link, current arhive link
+        // previous archive link, current archive link
         previous_archive_link: String,
         current_archive_link: String,
         // timestamp
@@ -304,7 +304,7 @@ module admin::reviews{
             submit_review_internal(reviewer_address, metadata, category, domain_address, site_url, site_type, site_tag, site_safety);
         };
 
-        //add archive
+        // add archive only if ipfs_hash is not null
         if(!string::is_empty(&site_ipfs_hash)){
             archive_link(reviewer, site_url, site_ipfs_hash);
         };
@@ -331,7 +331,7 @@ module admin::reviews{
             submit_review_internal(reviewer_address, metadata, category, domain_address, site_url, site_type, site_tag, site_safety);
         };
 
-        //add archive
+        // add archive only if ipfs_hash is not null
         if(!string::is_empty(&site_ipfs_hash)){
             archive_link(operator, site_url, site_ipfs_hash);
         };
@@ -348,7 +348,7 @@ module admin::reviews{
         let review_token_object = object::address_to_object<ReviewToken>(review_token_address);
         let reviewer = object::owner(review_token_object);
         let deleter_address = signer::address_of(deleter);
-        assert_owner(deleter_address, state.roles, reviewer);
+        assert_owner(deleter_address, reviewer);
         let review_token = move_from<ReviewToken>(review_token_address);
         let ReviewToken{mutator_ref: _, burn_ref} = review_token;
 
@@ -515,7 +515,6 @@ module admin::reviews{
     }
 
     inline fun assert_metadata_exists(review_hash: vector<u8>, metadatas: SimpleMap<vector<u8>, address>) {
-
         assert!(simple_map::contains_key(&metadatas, &review_hash), ERROR_REVIEW_DOES_NOT_EXIST);
     }
 
@@ -543,7 +542,7 @@ module admin::reviews{
         assert!(vector::contains(&roles.operator, &user) || user == @admin, ERROR_SIGNER_NOT_OPERATOR);
     }
 
-    inline fun assert_owner(user: address, roles: Roles, owner: address) {
+    inline fun assert_owner(user: address, owner: address) {
         assert!(user == owner, ERROR_NOT_REVIEW_OWNER);
     }
 
@@ -589,7 +588,7 @@ module admin::reviews{
 
         let expected_collection_address = collection::create_collection_address(
             &expected_resource_account_address,
-            &string::utf8(b"Review collection")
+            &string::utf8(COLLECTION_NAME)
         );
         let collection_object = object::address_to_object<collection::Collection>(expected_collection_address);
         assert!(
@@ -597,7 +596,7 @@ module admin::reviews{
             4
         );
         assert!(
-            collection::name<collection::Collection>(collection_object) == string::utf8(b"Review collection"),
+            collection::name<collection::Collection>(collection_object) == string::utf8(COLLECTION_NAME),
             4
         );
         assert!(
@@ -605,7 +604,7 @@ module admin::reviews{
             4
         );
         assert!(
-            collection::uri<collection::Collection>(collection_object) == string::utf8(b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/"),
+            collection::uri<collection::Collection>(collection_object) == string::utf8(COLLECTION_URI),
             4
         );
         assert!(state.count == 0, 4);
@@ -991,7 +990,7 @@ module admin::reviews{
             string::utf8(b"operator")
         );
 
-        delete_review(operator, metadata);
+        delete_review(reviewer, metadata);
 
         assert!(!exists<ReviewToken>(expected_review_token_address), 3);
 
