@@ -37,19 +37,22 @@ module admin::reviews{
     const ERROR_USER_NO_ROLE: u64 = 6;
     const ERROR_USER_ALREADY_HAS_ROLE: u64 = 7;
     const ERROR_INVALID_ROLE_NAME: u64 = 8;
-    const ERROR_WRONG_ROLE: u64 = 9;
+    const ERROR_NOT_REVIEW_OWNER: u64 = 9;
 
     //==============================================================================================
     // Constants
     //==============================================================================================
 
+    // Contract Version
+    const VERSION: u64 = 1;
+
     // Token collection information
-    const COLLECTION_NAME: vector<u8> = b"Review collection";
+    const COLLECTION_NAME: vector<u8> = b"NETSEPIO ";
     const COLLECTION_DESCRIPTION: vector<u8> = b"Share your web3 insight on NetSepio";
     const COLLECTION_URI: vector<u8> = b"ipfs://bafkreia6qgktro637lytd6nqpy6hkp7y5qbtvyaauxmlmh3o27pbfh64ja/";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"community reviews";
+    const TOKEN_DESCRIPTION: vector<u8> = b"REVIEWS NFT";
 
 
     //==============================================================================================
@@ -93,7 +96,7 @@ module admin::reviews{
         roles: Roles,
         // Events
         role_granted_events: EventHandle<RoleGrantedEvent>,
-        role_removed_events: EventHandle<RoleRemovedEvent>,
+        role_revoked_events: EventHandle<RoleRevokedEvent>,
         archive_link_events: EventHandle<ArchiveLinkEvent>,
         review_submitted_events: EventHandle<ReviewSubmittedEvent>,
         review_deleted_events: EventHandle<ReviewDeletedEvent>
@@ -114,7 +117,7 @@ module admin::reviews{
         timestamp: u64
     }
 
-    struct RoleRemovedEvent has store, drop {
+    struct RoleRevokedEvent has store, drop {
         // executor
         executor: address,
         // role
@@ -128,9 +131,9 @@ module admin::reviews{
     struct ArchiveLinkEvent has store, drop {
         // archive logger
         logger: address,
-        // previous ipfs, current ipfs
-        previous_ipfs: String,
-        current_ipfs: String,
+        // previous archive link, current arhive link
+        previous_archive_link: String,
+        current_archive_link: String,
         // timestamp
         timestamp: u64
     }
@@ -181,7 +184,7 @@ module admin::reviews{
 
         coin::register<AptosCoin>(&resource_signer);
 
-        // Create an NFT collection with an unlimied supply and the following aspects:
+        // Create a NFT collection with an unlimited supply with the following aspects:
         collection::create_unlimited_collection(
             &resource_signer,
             string::utf8(COLLECTION_DESCRIPTION),
@@ -203,7 +206,7 @@ module admin::reviews{
             websites: simple_map::new(),
             roles,
             role_granted_events: account::new_event_handle<RoleGrantedEvent>(&resource_signer),
-            role_removed_events: account::new_event_handle<RoleRemovedEvent>(&resource_signer),
+            role_revoked_events: account::new_event_handle<RoleRevokedEvent>(&resource_signer),
             archive_link_events: account::new_event_handle<ArchiveLinkEvent>(&resource_signer),
             review_submitted_events: account::new_event_handle<ReviewSubmittedEvent>(&resource_signer),
             review_deleted_events: account::new_event_handle<ReviewDeletedEvent>(&resource_signer)
@@ -244,12 +247,12 @@ module admin::reviews{
     }
 
     /*
-    Remove reviewer/operator roles
+    Revoke reviewer/operator roles
     @param admin - admin signer
     @param user - user address
     @param role - reviewer/operator
 */
-    public entry fun remove_role(
+    public entry fun revoke_role(
         admin: &signer,
         user: address
     ) acquires State {
@@ -265,10 +268,10 @@ module admin::reviews{
             vector::remove_value(&mut state.roles.reviewer, &user);
             role = string::utf8(b"reviewer");
         };
-        // Emit a new RoleRemovedEvent
-        event::emit_event<RoleRemovedEvent>(
-            &mut state.role_removed_events,
-            RoleRemovedEvent {
+        // Emit a new RoleRevokedEvent
+        event::emit_event<RoleRevokedEvent>(
+            &mut state.role_revoked_events,
+            RoleRevokedEvent {
                 executor: signer::address_of(admin),
                 role,
                 user,
@@ -302,7 +305,9 @@ module admin::reviews{
         };
 
         //add archive
-        archive_link(reviewer, site_url, site_ipfs_hash);
+        if(!string::is_empty(&site_ipfs_hash)){
+            archive_link(reviewer, site_url, site_ipfs_hash);
+        };
     }
 
     //delegate mint - will not cost users to mint reviews
@@ -327,7 +332,9 @@ module admin::reviews{
         };
 
         //add archive
-        archive_link(operator, site_url, site_ipfs_hash);
+        if(!string::is_empty(&site_ipfs_hash)){
+            archive_link(operator, site_url, site_ipfs_hash);
+        };
     }
 
     public entry fun delete_review(
@@ -341,7 +348,7 @@ module admin::reviews{
         let review_token_object = object::address_to_object<ReviewToken>(review_token_address);
         let reviewer = object::owner(review_token_object);
         let deleter_address = signer::address_of(deleter);
-        assert_owner_or_operator(deleter_address, state.roles, reviewer);
+        assert_owner(deleter_address, state.roles, reviewer);
         let review_token = move_from<ReviewToken>(review_token_address);
         let ReviewToken{mutator_ref: _, burn_ref} = review_token;
 
@@ -391,8 +398,8 @@ module admin::reviews{
             &mut state.archive_link_events,
             ArchiveLinkEvent {
                 logger: signer::address_of(user),
-                previous_ipfs: previous_archive,
-                current_ipfs: site_ipfs_hash,
+                previous_archive_link: previous_archive,
+                current_archive_link: site_ipfs_hash,
                 timestamp: timestamp::now_seconds()
             });
     }
@@ -536,8 +543,8 @@ module admin::reviews{
         assert!(vector::contains(&roles.operator, &user) || user == @admin, ERROR_SIGNER_NOT_OPERATOR);
     }
 
-    inline fun assert_owner_or_operator(user: address, roles: Roles, owner: address) {
-        assert!(vector::contains(&roles.operator, &user) || user == owner, ERROR_WRONG_ROLE);
+    inline fun assert_owner(user: address, roles: Roles, owner: address) {
+        assert!(user == owner, ERROR_NOT_REVIEW_OWNER);
     }
 
     //==============================================================================================
@@ -999,7 +1006,7 @@ module admin::reviews{
     }
 
     #[test(admin = @admin, reviewer = @0xA, operator = @0xB)]
-    #[expected_failure(abort_code = ERROR_WRONG_ROLE)]
+    #[expected_failure(abort_code = ERROR_NOT_REVIEW_OWNER)]
     fun test_delete_review_failure_not_operator_nor_owner(
         admin: &signer,
         operator: &signer,
@@ -1133,7 +1140,7 @@ module admin::reviews{
     }
 
     #[test(admin = @admin, operator = @0xB)]
-    fun test_remove_operator_role_success(
+    fun test_revoke_operator_role_success(
         admin: &signer,
         operator: &signer
     ) acquires State {
@@ -1159,19 +1166,19 @@ module admin::reviews{
             assert!(event::counter(&state.role_granted_events) == 1, 4);
         };
 
-        remove_role(
+        revoke_role(
             admin,
             operator_address
         );
 
         let state = borrow_global<State>(admin_address);
         assert!(!vector::contains(&state.roles.operator, &operator_address), 4);
-        assert!(event::counter(&state.role_removed_events) == 1, 4);
+        assert!(event::counter(&state.role_revoked_events) == 1, 4);
     }
 
     #[test(admin = @admin, user = @0xB)]
     #[expected_failure(abort_code = ERROR_USER_NO_ROLE)]
-    fun test_remove_role_failure_user_has_no_role(
+    fun test_revoke_role_failure_user_has_no_role(
         admin: &signer,
         user: &signer
     ) acquires State {
@@ -1184,7 +1191,7 @@ module admin::reviews{
         timestamp::set_time_has_started_for_testing(&aptos_framework);
 
         init_module(admin);
-        remove_role(
+        revoke_role(
             admin,
             user_address
         );

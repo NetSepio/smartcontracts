@@ -19,6 +19,7 @@ module admin::erebrus{
     //use std::debug;
     use aptos_token_objects::royalty;
     use std::bcs;
+    use aptos_framework::object::address_to_object;
 
     #[test_only]
     use aptos_framework::aptos_coin::{Self};
@@ -30,40 +31,42 @@ module admin::erebrus{
     const ERROR_SIGNER_NOT_ADMIN: u64 = 0;
     const ERROR_SUPPLY_EXCEEDED: u64 = 1;
     const ERROR_SIGNER_NOT_OPERATOR: u64 = 2;
+    const ERROR_USER_MINT_EXCEEDED: u64 = 3;
     const ERROR_OTHERS: u64 = 4;
     const ERROR_INSUFFICIENT_BALANCE: u64 = 5;
-    const ERROR_MINTER_MINTED: u64 = 6;
+    const ERROR_ALREADY_OPERATOR: u64 = 6;
 
     //==============================================================================================
     // Constants
     //==============================================================================================
 
+    // Contract Version
+    const VERSION: u64 = 1;
+
     //Price
-    const PRICE_APT: u64 = 111000000; // 1.11 APT
+    const MINT_PRICE: u64 = 111000000; // 1.11 APT
 
     // Supply limit
     const SUPPLY: u64 = 111;
 
     // NFT collection information
     const COLLECTION_NAME: vector<u8> = b"EREBRUS";
-    const COLLECTION_DESCRIPTION: vector<u8> = b"111 VPN Utility NFT with 11 distinct characters";
+    const COLLECTION_DESCRIPTION: vector<u8> = b"Erebrus, by NetSepio. 111 innovative utility NFT that offers you access to a blockchain-backed, distributed Anonymous VPN.";
     const COLLECTION_URI: vector<u8> = b"ipfs://bafybeiakibvianmzrecxzyh6oonapk7fqggburcfsseildhhgrbxh3tz2u/111nft.png";
 
     // Token information
-    const TOKEN_DESCRIPTION: vector<u8> = b"Erebrus 111 VPN NFT";
-    const TOKEN_URI: vector<u8> = b"ipfs://bafybeidpuars3e6phzz34fpwnkbt6fl7epkie7hxzbd3gwnqjzbxw6n3ri/";
+    const TOKEN_DESCRIPTION: vector<u8> = b"Erebrus NFT";
+    const TOKEN_URI: vector<u8> = b"ipfs://bafybeieocwztsh2aqhb4vuwlpduw2blamfgsegthyjb3kbbwatqnj6t4hy/";
 
     //==============================================================================================
     // Module Structs
     //==============================================================================================
 
-    struct NftToken has key {
+    struct ErebrusToken has key {
         // Used for editing the token data
         mutator_ref: token::MutatorRef,
         // Used for burning the token
-        burn_ref: token::BurnRef,
-        // Used for transfering the token
-        transfer_ref: object::TransferRef
+        burn_ref: token::BurnRef
     }
 
     struct State has key {
@@ -71,6 +74,7 @@ module admin::erebrus{
         signer_cap: SignerCapability,
         // NFT count
         minted: u64,
+        operator: vector<address>,
         //minter
         minter: vector<address>,
         // minted_nft_obj_add
@@ -108,7 +112,7 @@ module admin::erebrus{
         let seed = bcs::to_bytes(&@VSEED);
         let (resource_signer, resource_cap) = account::create_resource_account(admin, seed);
 
-        let royalty = royalty::create(5,10,@wv1);
+        let royalty = royalty::create(5,100,@wv1);
 
         // Create an NFT collection with an unlimied supply and the following aspects:
         collection::create_fixed_collection(
@@ -124,6 +128,7 @@ module admin::erebrus{
         let state = State{
             signer_cap: resource_cap,
             minted: 0,
+            operator: vector::empty(),
             minter: vector::empty(),
             nft_list: vector::empty(),
             nft_minted_events: account::new_event_handle<NftMintedEvent>(&resource_signer)
@@ -134,15 +139,45 @@ module admin::erebrus{
     public entry fun user_mint(minter: &signer) acquires State{
         let user_add = signer::address_of(minter);
         assert_new_minter(user_add);
-        check_if_user_has_enough_apt(user_add,PRICE_APT) ;
+        check_if_user_has_enough_apt(user_add, MINT_PRICE) ;
         //payment
-        coin::transfer<AptosCoin>(minter, @wv1, PRICE_APT);
+        coin::transfer<AptosCoin>(minter, @wv1, MINT_PRICE);
         mint_internal(user_add);
     }
 
     public entry fun delegate_mint(operator: &signer, minter: address) acquires State{
-        assert_operator(admin::reviews::check_role(signer::address_of(operator)));
+        assert_operator(signer::address_of(operator));
         mint_internal(minter);
+    }
+
+    /*
+    Grants operator roles
+    @param admin - admin signer
+    @param user - user address
+*/
+    public entry fun grant_role(
+        admin: &signer,
+        user: address
+    ) acquires State {
+        let state = borrow_global_mut<State>(@admin);
+        assert_user_does_not_have_role(user);
+        assert_admin(signer::address_of(admin));
+        vector::push_back(&mut state.operator, user);
+    }
+
+    /*
+    Revoke operator roles
+    @param admin - admin signer
+    @param user - user address
+*/
+    public entry fun revoke_role(
+        admin: &signer,
+        user: address
+    ) acquires State {
+        let state = borrow_global_mut<State>(@admin);
+        assert_operator(user);
+        assert_admin(signer::address_of(admin));
+        vector::remove_value(&mut state.operator, &user);
     }
 
     //==============================================================================================
@@ -157,7 +192,7 @@ module admin::erebrus{
         let current_nft = state.minted + 1;
         let res_signer = account::create_signer_with_capability(&state.signer_cap);
 
-        let royalty = royalty::create(5,10,@wv1);
+        let royalty = royalty::create(5,100,@wv1);
         let uri = string::utf8(TOKEN_URI);
         string::append(&mut uri, string_utils::format1(&b"{}.json", current_nft));
         // Create a new named token:
@@ -165,7 +200,7 @@ module admin::erebrus{
             &res_signer,
             string::utf8(COLLECTION_NAME),
             string::utf8(TOKEN_DESCRIPTION),
-            string_utils::format1(&b"nft#{}", current_nft),
+            string_utils::format1(&b"Erebrus #{}", current_nft),
             option::some(royalty),
             uri
         );
@@ -177,13 +212,12 @@ module admin::erebrus{
         object::transfer_raw(&res_signer, obj_add, user);
 
         // Create the ReviewToken object and move it to the new token object signer
-        let new_nft_token = NftToken {
+        let new_nft_token = ErebrusToken {
             mutator_ref: token::generate_mutator_ref(&token_const_ref),
             burn_ref: token::generate_burn_ref(&token_const_ref),
-            transfer_ref: object::generate_transfer_ref(&token_const_ref),
         };
 
-        move_to<NftToken>(&obj_signer, new_nft_token);
+        move_to<ErebrusToken>(&obj_signer, new_nft_token);
 
         state.minted = current_nft;
         vector::push_back(&mut state.minter, user);
@@ -200,10 +234,20 @@ module admin::erebrus{
             });
     }
 
+    //==============================================================================================
+    // View functions
+    //==============================================================================================
+
     #[view]
     public fun total_minted_NFTs(): u64 acquires State {
         let state = borrow_global<State>(@admin);
         state.minted
+    }
+
+    #[view]
+    public fun owner_of(tokenId: u64): address acquires State {
+        let state = borrow_global<State>(@admin);
+        object::owner(object::address_to_object<ErebrusToken>(*vector::borrow(&state.nft_list, tokenId-1)))
     }
 
     //==============================================================================================
@@ -214,22 +258,26 @@ module admin::erebrus{
         assert!(admin == @admin, ERROR_SIGNER_NOT_ADMIN);
     }
 
-    inline fun assert_operator(check_role_return: String) {
-        assert!(check_role_return == string::utf8(b"operator") , ERROR_SIGNER_NOT_OPERATOR);
+    inline fun assert_operator(user: address) acquires State {
+        let state = borrow_global<State>(@admin);
+        assert!(vector::contains(&state.operator,&user), ERROR_SIGNER_NOT_OPERATOR);
     }
 
     inline fun assert_new_minter(minter: address) {
         let state = borrow_global<State>(@admin);
-        assert!(!vector::contains(&state.minter, &minter), ERROR_MINTER_MINTED);
+        assert!(!vector::contains(&state.minter, &minter), ERROR_USER_MINT_EXCEEDED);
     }
 
     inline fun assert_supply_not_exceeded(minted: u64) {
-        assert!(minted < SUPPLY, ERROR_SUPPLY_EXCEEDED);
+        assert!(minted <= SUPPLY, ERROR_SUPPLY_EXCEEDED);
+    }
+
+    inline fun assert_user_does_not_have_role(user: address) acquires State {
+        let state = borrow_global<State>(@admin);
+        assert!(!vector::contains(&state.operator,&user), ERROR_ALREADY_OPERATOR);
     }
 
     inline fun check_if_user_has_enough_apt(user: address, amount_to_check_apt: u64) {
-        // TODO: Ensure that the user's balance of apt is greater than or equal to the given amount.
-        //          If false, abort with code: EInsufficientAptBalance
         assert!(coin::balance<AptosCoin>(user) >= amount_to_check_apt, ERROR_INSUFFICIENT_BALANCE);
     }
 
@@ -304,7 +352,7 @@ module admin::erebrus{
         coin::register<AptosCoin>(user);
         coin::register<AptosCoin>(bank);
         init_module(admin);
-        aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
+        aptos_coin::mint(&aptos_framework, user_address, MINT_PRICE);
 
         let image_uri = string::utf8(TOKEN_URI);
         string::append(&mut image_uri, string_utils::format1(&b"{}.json",1));
@@ -381,7 +429,7 @@ module admin::erebrus{
         coin::register<AptosCoin>(bank);
 
         init_module(admin);
-        aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
+        aptos_coin::mint(&aptos_framework, user_address, MINT_PRICE);
 
         {
             let state = borrow_global_mut<State>(admin_address);
@@ -395,7 +443,7 @@ module admin::erebrus{
     }
 
     #[test(admin = @admin, user = @0xA, bank = @wv1)]
-    #[expected_failure(abort_code = ERROR_MINTER_MINTED)]
+    #[expected_failure(abort_code = ERROR_USER_MINT_EXCEEDED)]
     fun test_mint_failed_minter_minted(
         admin: &signer,
         user: &signer,
@@ -417,7 +465,7 @@ module admin::erebrus{
         coin::register<AptosCoin>(bank);
 
         init_module(admin);
-        aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
+        aptos_coin::mint(&aptos_framework, user_address, MINT_PRICE);
 
         user_mint(user);
         user_mint(user);
@@ -446,7 +494,7 @@ module admin::erebrus{
             aptos_coin::initialize_for_test(&aptos_framework);
         coin::register<AptosCoin>(user);
         init_module(admin);
-        aptos_coin::mint(&aptos_framework, user_address, PRICE_APT);
+        aptos_coin::mint(&aptos_framework, user_address, MINT_PRICE);
 
         admin::reviews::grant_role(
             admin,
