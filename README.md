@@ -1,17 +1,108 @@
-# Smart Contracts
+# Erebrus Registry - Solana Anchor Project
 
-_Mainnet Deployment:_ 0xc2047066ac28da8e0e7c0988aaa15c283ca38109c4d8dfc1d60a89a69809608e
+This project implements the Erebrus Registry, a decentralized system for managing WiFi and VPN nodes on the Solana blockchain.
 
-_Testnet Deployment:_ 75bcfe882d1a4d032ead2b47f377e4c95221594d66ab2bd09a61aded4c9d64f9
+_Devnet Deployment:_ [dyu7uefnn2Y2bKCDu6uTP4pVBPcBu4RPwsV522rjtbR6B2BJyA4vWC4eLGosDXqPzMpXsaBgzbE8VjqMkaYgf6g](https://explorer.solana.com/tx/dyu7uefnn2Y2bKCDu6uTP4pVBPcBu4RPwsV522rjtbR6B2BJyA4vWC4eLGosDXqPzMpXsaBgzbE8VjqMkaYgf6g?cluster=devnet)
 
-## 1. REVIEW NFT
-Smart contract for submit & delete reviews, grant operator/reviewer roles, view functions, etc.
+## Features
 
-## 2. EREBRUS NFT
-Smart Contract for the EREBRUS Collection with supply of 111 NFTs.
+1. **Registry Initialization**: Set up the main registry for managing nodes.
+2. **WiFi Node Management**: Register, update, and deactivate WiFi nodes.
+3. **VPN Node Management**: Register, update, and deactivate VPN nodes.
+4. **Device Checkpoints**: Record checkpoints for registered devices.
 
-## 3. OG NFT
-Smart contract for commemorative NFT for first 500 beta testers.
+## Smart Contract Structure
 
-## 4. REPORT NFT
-Smart contract for DAO proposal NFT for scam reports.
+The main program module `erebrus_registry` contains the following key functions:
+
+- `initialize`: Initialize the Erebrus Registry.
+- `register_wifi_node`: Register a new WiFi node.
+- `update_wifi_node`: Update an existing WiFi node's information.
+- `register_vpn_node`: Register a new VPN node.
+- `update_vpn_node`: Update an existing VPN node's information.
+- `deactivate_node`: Deactivate a node (can be either WiFi or VPN).
+- `device_checkpoint`: Record a checkpoint for a device.
+
+## Account Structures
+
+- `ErebrusRegistry`: Main registry account.
+- `Node`: Represents a WiFi or VPN node.
+- `Checkpoint`: Represents a device checkpoint.
+
+## Development
+
+This project uses Anchor, a framework for Solana's Sealevel runtime.
+
+### Prerequisites
+
+- Rust
+- Solana CLI
+- Anchor
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+### Building
+
+To build the project, run:
+
+```
+anchor build
+```
+
+### Testing
+
+To run tests, use:
+
+```
+anchor test
+```
+
+### Deploying
+
+To deploy the program to the Solana network, use:
+
+```
+anchor deploy
+```
+
+### Interacting with the Program
+
+You can interact with the program using the Solana CLI and the `spl-token` command-line tool.
+
+#### Registering a WiFi Node
+
+To register a WiFi node, use:
+
+```
+spl-token create-token --name "WiFi Node" --symbol "WIFI" --decimals 9
+```
+
+#### Registering a VPN Node
+
+To register a VPN node, use:
+
+```
+spl-token create-token --name "VPN Node" --symbol "VPN" --decimals 9
+```
+
+#### Deactivating a Node
+
+To deactivate a node, use:
+
+```
+spl-token deactivate-token --token-address <token-address>
+```
+
+#### Recording a Device Checkpoint
+
+To record a device checkpoint, use:
+
+```
+spl-token checkpoint-token --token-address <token-address>
+```
