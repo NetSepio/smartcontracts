@@ -71,38 +71,4 @@ To deploy the program to the Solana network, use:
 anchor deploy
 ```
 
-### Interacting with the Program
 
-You can interact with the program using the Solana CLI and the `spl-token` command-line tool.
-
-#### Registering a WiFi Node
-
-To register a WiFi node, use:
-
-```
-spl-token create-token --name "WiFi Node" --symbol "WIFI" --decimals 9
-```
-
-#### Registering a VPN Node
-
-To register a VPN node, use:
-
-```
-spl-token create-token --name "VPN Node" --symbol "VPN" --decimals 9
-```
-
-#### Deactivating a Node
-
-To deactivate a node, use:
-
-```
-spl-token deactivate-token --token-address <token-address>
-```
-
-#### Recording a Device Checkpoint
-
-To record a device checkpoint, use:
-
-```
-spl-token checkpoint-token --token-address <token-address>
-```
