@@ -1,0 +1,21 @@
+[package]
+name = "init"
+version = "1.0.0"
+authors = []
+
+[dependencies.AptosFramework]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-framework'
+
+[dependencies.AptosTokenObjects]
+git = 'https://github.com/aptos-labs/aptos-core.git' 
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-token-objects'
+
+[addresses]
+admin = ""
+VSEED = ""
+wv1 = "" 
+std = "0x1"
+aptos_token_objects ="0x4"
