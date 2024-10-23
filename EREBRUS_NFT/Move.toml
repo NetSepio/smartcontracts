@@ -1,7 +1,6 @@
 [package]
-name = "init"
+name = "erberus"
 version = "1.0.0"
-authors = []
 
 [dependencies.AptosFramework]
 git = 'https://github.com/aptos-labs/aptos-core.git'
@@ -14,7 +13,7 @@ rev = 'main'
 subdir = 'aptos-move/framework/aptos-token-objects'
 
 [addresses]
-admin = ""
+admin = "0x6299daec2e0c0e0f8c0f824bd91290286af7d709375b4c9593858d49a2227a40"
 VSEED = ""
 wv1 = "" 
 std = "0x1"
