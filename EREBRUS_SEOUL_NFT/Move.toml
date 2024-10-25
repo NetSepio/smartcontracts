@@ -1,5 +1,5 @@
 [package]
-name = "erberus"
+name = "erberus_seoul"
 version = "1.0.0"
 
 [dependencies.AptosFramework]
@@ -13,7 +13,7 @@ rev = 'main'
 subdir = 'aptos-move/framework/aptos-token-objects'
 
 [addresses]
-admin = "0x6299daec2e0c0e0f8c0f824bd91290286af7d709375b4c9593858d49a2227a40"
+admin = ""
 VSEED = ""
 wv1 = "" 
 std = "0x1"
